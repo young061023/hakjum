@@ -68,9 +68,16 @@ const server = http.createServer((request, response) => {
       return;
     }
 
-    response.writeHead(200, {
-      "content-type": contentTypes[path.extname(filePath)] || "application/octet-stream"
-    });
+    const ext = path.extname(filePath);
+    const headers = {
+      "content-type": contentTypes[ext] || "application/octet-stream"
+    };
+
+    if ([".html", ".js", ".css"].includes(ext)) {
+      headers["cache-control"] = "no-store, max-age=0";
+    }
+
+    response.writeHead(200, headers);
     response.end(content);
   });
 });

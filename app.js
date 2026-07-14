@@ -837,10 +837,10 @@ async function vectorizeMaterialText(course, material) {
     form.append("course_name", course.name);
     form.append("material_id", material.id);
     form.append("title", title);
-    response = await fetch("/vectorize-upload", {
+    response = await fetchWithTimeout("/vectorize-upload", {
       method: "POST",
       body: form
-    });
+    }, 12000);
     try {
       const data = await readJsonResponse(response, "PDF 페이지 기반 Chroma 저장");
       if (!response.ok || !data.ok) {
@@ -854,7 +854,7 @@ async function vectorizeMaterialText(course, material) {
       return data;
     } catch (error) {
       console.warn(error);
-      response = await fetch("/vectorize-text", {
+      response = await fetchWithTimeout("/vectorize-text", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
@@ -864,10 +864,10 @@ async function vectorizeMaterialText(course, material) {
           title,
           text: material.summary
         })
-      });
+      }, 12000);
     }
   } else {
-    response = await fetch("/vectorize-text", {
+    response = await fetchWithTimeout("/vectorize-text", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -877,7 +877,7 @@ async function vectorizeMaterialText(course, material) {
         title,
         text: material.summary
       })
-    });
+    }, 12000);
   }
 
   const data = await readJsonResponse(response, "Chroma DB 저장");
@@ -890,6 +890,22 @@ async function vectorizeMaterialText(course, material) {
   material.vectorizedAt = new Date().toISOString();
   material.chunkCount = data.chunk_count || 0;
   return data;
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("서버 응답 시간이 너무 깁니다. 8000 백엔드 서버를 다시 확인하세요.");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function readJsonResponse(response, label = "요청") {
