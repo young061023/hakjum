@@ -1,17 +1,17 @@
 :root {
   color-scheme: light;
-  --bg: #f4f5f7;
-  --panel: #ffffff;
-  --line: #d8dde5;
-  --line-dark: #c5ccd6;
-  --text: #22262d;
-  --subtle: #616874;
-  --muted: #8b93a1;
-  --brand: #2d64e8;
-  --brand-dark: #1f4fc4;
+  --bg: #fbf6f3;
+  --panel: #fffdfc;
+  --line: #efe4e1;
+  --line-dark: #dfcfcc;
+  --text: #2c2325;
+  --subtle: #75686b;
+  --muted: #9c8e91;
+  --brand: #cf5368;
+  --brand-dark: #a9364c;
   --good: #168a52;
   --bad: #c93c3c;
-  --shadow: 0 18px 48px rgba(26, 32, 44, 0.08);
+  --shadow: 0 18px 48px rgba(91, 49, 55, 0.08);
 }
 
 * {
@@ -192,7 +192,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(45, 100, 232, 0.14);
+  box-shadow: 0 0 0 3px rgba(207, 83, 104, 0.14);
 }
 
 .grid {
@@ -252,7 +252,7 @@ button:disabled {
 }
 
 .secondary:hover {
-  background: #eef1f5;
+  background: #f5ecea;
 }
 
 .status {
@@ -298,7 +298,7 @@ button:disabled {
   width: 24px;
   height: 24px;
   border-radius: 999px;
-  background: #e7ebf1;
+  background: #f2e3e2;
   color: var(--subtle);
   font-size: 13px;
   font-weight: 900;
@@ -495,7 +495,7 @@ button:disabled {
 code {
   padding: 2px 6px;
   border-radius: 5px;
-  background: #eef1f5;
+  background: #f5ecea;
 }
 
 sup,
@@ -660,7 +660,7 @@ sub {
   width: 160px;
   height: 160px;
   margin: 0 auto;
-  border: 16px solid #e7ebf1;
+  border: 16px solid #f2e3e2;
   border-top-color: var(--brand);
   border-right-color: var(--good);
   border-radius: 999px;
@@ -681,7 +681,7 @@ sub {
   height: 10px;
   margin-top: 22px;
   border-radius: 999px;
-  background: #e7ebf1;
+  background: #f2e3e2;
   overflow: hidden;
 }
 
@@ -963,7 +963,7 @@ button.auto-plan-item:hover {
 
 .material-item.active {
   border-color: var(--brand);
-  box-shadow: 0 0 0 3px rgba(45, 100, 232, 0.12);
+  box-shadow: 0 0 0 3px rgba(207, 83, 104, 0.12);
 }
 
 .material-item strong,
@@ -1097,7 +1097,7 @@ button.auto-plan-item:hover {
   height: 8px;
   margin-top: 12px;
   border-radius: 999px;
-  background: #e7ebf1;
+  background: #f2e3e2;
   overflow: hidden;
 }
 
@@ -1149,7 +1149,7 @@ button.auto-plan-item:hover {
   white-space: nowrap;
   padding: 3px 6px;
   border-radius: 5px;
-  background: #eef1f5;
+  background: #f5ecea;
   color: var(--subtle);
   font-size: 12px;
   font-weight: 800;
@@ -1270,12 +1270,12 @@ button.auto-plan-item:hover {
 
 .grade-chart .grade-line {
   fill: none;
-  stroke: #2d64e8;
+  stroke: #cf5368;
   stroke-width: 3;
 }
 
 .grade-chart .grade-dot {
-  fill: #2d64e8;
+  fill: #cf5368;
   stroke: #fff;
   stroke-width: 2;
 }
@@ -1322,9 +1322,9 @@ button.auto-plan-item:hover {
 .direction-text {
   margin: 18px 0 0;
   padding: 16px;
-  border: 1px solid rgba(45, 100, 232, 0.18);
+  border: 1px solid rgba(207, 83, 104, 0.18);
   border-radius: 8px;
-  background: #f4f7ff;
+  background: #fff2f4;
   color: var(--text);
   font-weight: 800;
   line-height: 1.55;
