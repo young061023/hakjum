@@ -724,7 +724,7 @@ async function vectorizeMaterialText(course, material) {
     });
   }
 
-  const data = await response.json();
+  const data = await readJsonResponse(response, "Chroma DB 저장");
   if (!response.ok || !data.ok) {
     throw new Error(data.error || "Chroma DB 저장에 실패했습니다.");
   }
@@ -734,6 +734,20 @@ async function vectorizeMaterialText(course, material) {
   material.vectorizedAt = new Date().toISOString();
   material.chunkCount = data.chunk_count || 0;
   return data;
+}
+
+async function readJsonResponse(response, label = "요청") {
+  const text = await response.text();
+  if (!text.trim()) {
+    throw new Error(`${label} 실패: 서버 응답이 비어 있습니다. 8000 백엔드 서버를 다시 확인하세요.`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    const preview = text.replace(/\s+/g, " ").slice(0, 180);
+    throw new Error(`${label} 실패: 서버가 JSON이 아닌 응답을 보냈습니다. ${preview}`);
+  }
 }
 
 async function ensureCourseMaterialsVectorized(course) {
@@ -2323,8 +2337,30 @@ $("#signUpButton")?.addEventListener("click", async () => {
     return;
   }
   if (authStatus) {
-    authStatus.textContent = "가입 요청을 보냈습니다. 이메일 확인 설정이 켜져 있으면 메일을 확인하세요.";
-    authStatus.className = "status ok";
+    authStatus.textContent = "회원가입 요청을 보내는 중입니다.";
+    authStatus.className = "status";
+  }
+  if (button) button.disabled = true;
+
+  try {
+    const { error } = await supabaseClient.auth.signUp({
+      email,
+      password
+    });
+    if (error) {
+      if (authStatus) {
+        authStatus.textContent = `가입 실패: ${error.message}`;
+        authStatus.className = "status error";
+      }
+      return;
+    }
+    if (authStatus) {
+      authStatus.textContent = "가입 요청을 보냈습니다. 이메일 확인 설정이 켜져 있으면 메일을 확인하세요.";
+      authStatus.className = "status ok";
+    }
+    closeSignUpModal();
+  } finally {
+    if (button) button.disabled = false;
   }
 });
 

@@ -39,6 +39,12 @@ def clean_text(text):
     return text.strip()
 
 
+def safe_chroma_id(*parts):
+    raw = "::".join(str(part or "") for part in parts)
+    digest = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return f"chunk-{digest[:32]}"
+
+
 def infer_concept_title(text):
     raw = str(text or "")
     patterns = [
@@ -228,7 +234,7 @@ def vectorize_material(material_id, course_id=None):
         chunks = split_text_chunks(page.get("cleaned_text", ""))
 
         for chunk_index, chunk in enumerate(chunks):
-            chunk_id = f"{page.get('material_id')}:{page.get('id')}:{chunk_index}"
+            chunk_id = safe_chroma_id(page.get("material_id"), page.get("id"), chunk_index)
             ids.append(chunk_id)
             documents.append(chunk)
             metadatas.append(
@@ -263,7 +269,7 @@ def vectorize_pages(material_id, pages, course_id=None, course_name="", title=""
         chunks = split_text_chunks(page.get("text", ""))
 
         for chunk_index, chunk in enumerate(chunks):
-            chunk_id = f"{material_id}:page:{page_number}:{slide_number}:{chunk_index}"
+            chunk_id = safe_chroma_id(material_id, "page", page_number, slide_number, chunk_index)
             ids.append(chunk_id)
             documents.append(chunk)
             metadatas.append(
@@ -301,7 +307,7 @@ def vectorize_text(material_id, text, course_id=None, course_name="", title="", 
     metadatas = []
 
     for chunk_index, chunk in enumerate(chunks):
-        chunk_id = f"{material_id}:local:{chunk_index}"
+        chunk_id = safe_chroma_id(material_id, "local", chunk_index)
         ids.append(chunk_id)
         documents.append(chunk)
         metadatas.append(
