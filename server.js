@@ -68,9 +68,16 @@ const server = http.createServer((request, response) => {
       return;
     }
 
-    response.writeHead(200, {
-      "content-type": contentTypes[path.extname(filePath)] || "application/octet-stream"
-    });
+    const ext = path.extname(filePath);
+    const headers = {
+      "content-type": contentTypes[ext] || "application/octet-stream"
+    };
+
+    if ([".html", ".js", ".css"].includes(ext)) {
+      headers["cache-control"] = "no-store, max-age=0";
+    }
+
+    response.writeHead(200, headers);
     response.end(content);
   });
 });
@@ -86,6 +93,9 @@ function proxyToModelServer(clientRequest, clientResponse) {
     backendUrl
   );
   const transport = targetUrl.protocol === "https:" ? https : http;
+  const headers = { ...clientRequest.headers, host: targetUrl.host };
+  delete headers["content-length"];
+
   const proxyRequest = transport.request(
     {
       protocol: targetUrl.protocol,
@@ -93,17 +103,48 @@ function proxyToModelServer(clientRequest, clientResponse) {
       port: targetUrl.port || (targetUrl.protocol === "https:" ? 443 : 80),
       path: targetUrl.pathname + targetUrl.search,
       method: "POST",
-      headers: clientRequest.headers
+      headers
     },
     (proxyResponse) => {
-      clientResponse.writeHead(proxyResponse.statusCode || 500, proxyResponse.headers);
-      proxyResponse.pipe(clientResponse);
+      const chunks = [];
+      proxyResponse.on("data", (chunk) => chunks.push(chunk));
+      proxyResponse.on("end", () => {
+        const raw = Buffer.concat(chunks);
+        const headers = { ...proxyResponse.headers };
+        delete headers["content-length"];
+
+        if (!raw.length) {
+          clientResponse.writeHead(proxyResponse.statusCode && proxyResponse.statusCode >= 400 ? proxyResponse.statusCode : 502, {
+            "content-type": "application/json; charset=utf-8"
+          });
+          clientResponse.end(
+            JSON.stringify({
+              ok: false,
+              error: `${targetUrl.pathname} 서버 응답이 비어 있습니다. 8000 백엔드와 터널 주소를 다시 확인하세요.`
+            })
+          );
+          return;
+        }
+
+        clientResponse.writeHead(proxyResponse.statusCode || 500, headers);
+        clientResponse.end(raw);
+      });
     }
   );
 
-  proxyRequest.on("error", () => {
+  proxyRequest.setTimeout(120000, () => {
+    proxyRequest.destroy(new Error("백엔드 서버 응답 시간이 너무 깁니다."));
+  });
+
+  proxyRequest.on("error", (error) => {
+    if (clientResponse.writableEnded) return;
     clientResponse.writeHead(502, { "content-type": "application/json; charset=utf-8" });
-    clientResponse.end(JSON.stringify({ ok: false, error: `${backendUrl.origin} 백엔드 서버에 연결할 수 없습니다.` }));
+    clientResponse.end(
+      JSON.stringify({
+        ok: false,
+        error: `${backendUrl.origin} 백엔드 서버에 연결할 수 없습니다. ${error.message}`
+      })
+    );
   });
 
   clientRequest.pipe(proxyRequest);

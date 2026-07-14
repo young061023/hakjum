@@ -1,31 +1,187 @@
 <!doctype html>
 <html lang="ko">
-  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>캘린더 - 학점수호자</title><link rel="stylesheet" href="./styles.css" /><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script><script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script></head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>캘린더 - 학점수호자</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$","$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  </head>
   <body>
     <main class="shell app-shell">
-      <header class="app-header"><div><p class="eyebrow">ACADEMIC CALENDAR</p><h1>캘린더</h1><p>시험 기간과 공부 일정을 한곳에서 관리하세요.</p></div><div class="header-score"><span>현재 GPA</span><strong id="headerGpa">3.48</strong></div></header>
-      <nav class="tabbar" aria-label="주요 화면"><a class="tab" href="./index.html">홈</a><a class="tab" href="./study.html">과제/공부</a><a class="tab active" href="./calendar.html">캘린더</a><a class="tab" href="./grade.html">성적 역산</a><a class="tab" href="./generator.html">문제 생성</a><a class="tab" href="./auth.html">로그인</a></nav>
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">ACADEMIC CALENDAR</p>
+          <h1>캘린더</h1>
+          <p>시험 기간과 공부 일정을 한곳에서 관리하세요.</p>
+        </div>
+        <label class="header-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="무엇을 도와드릴까요?" aria-label="검색" /><kbd>⌘K</kbd></label>
+        <a class="header-coach" href="./study.html"><span aria-hidden="true">✦</span> AI 학점 코치</a>
+        <a class="header-notification" href="./calendar.html" aria-label="일정 알림"><span aria-hidden="true">♧</span><i></i></a>
+        <div class="header-score">
+          <span>현재 성적</span><strong id="headerGpa">3.48</strong>
+        </div>
+      </header>
+      <nav class="tabbar" aria-label="주요 화면">
+        <a class="tab" href="./index.html">홈</a
+        ><a class="tab" href="./study.html">과제/공부</a
+        ><a class="tab active" href="./calendar.html">캘린더</a
+        ><a class="tab" href="./grade.html">성적 역산</a
+        ><a class="tab" href="./generator.html">문제 생성</a
+        ><a class="tab" href="./auth.html">로그인</a>
+      </nav>
 
       <section id="calendarView" class="page-section calendar-page">
         <section class="calendar-toolbar panel">
-          <div><span class="section-label">일정 탐색</span><h2 id="calendarTitle">이번 달 일정</h2></div>
-          <div class="calendar-controls"><select id="calendarYear" aria-label="연도 선택"></select><select id="calendarMonth" aria-label="월 선택"></select><input id="calendarDatePicker" type="date" aria-label="날짜 선택" /><button id="toggleCalendar" class="icon-button calendar-toggle" type="button" aria-label="캘린더 열고 닫기">▣</button><button id="openTaskModal" class="primary inline-primary" type="button">+ 일정 추가하기</button></div>
+          <button id="toggleCalendar" class="calendar-collapse-handle" type="button" aria-label="캘린더 열고 닫기" aria-expanded="true">
+            <span class="section-label">일정 탐색</span>
+            <span class="calendar-title-row"><strong id="calendarTitle">이번 달 일정</strong><i aria-hidden="true"></i></span>
+          </button>
+          <div class="calendar-controls">
+            <select id="calendarYear" aria-label="연도 선택"></select
+            ><select id="calendarMonth" aria-label="월 선택"></select
+            ><input
+              id="calendarDatePicker"
+              type="date"
+              aria-label="날짜 선택"
+            /><button
+              id="openTaskModal"
+              class="primary inline-primary"
+              type="button"
+            >
+              + 일정 추가하기
+            </button>
+          </div>
         </section>
 
-        <section id="collapsedDateBar" class="panel selected-date-bar" hidden><div><span id="selectedDateLabel">오늘</span><strong id="selectedDateCount">일정 0개</strong></div><div id="selectedDateInline" class="selected-date-inline">일정이 없습니다.</div></section>
+        <section id="collapsedDateBar" class="panel selected-date-bar" hidden>
+          <div class="collapsed-date-head"><span>선택 날짜</span><strong id="selectedDateLabel">오늘</strong><b id="selectedDateCount">일정 0개</b></div>
+          <p class="collapsed-date-help">위 날짜 선택란에서 이전·다음 날짜로 이동할 수 있습니다.</p>
+          <div id="selectedDateInline" class="selected-date-inline">
+            일정이 없습니다.
+          </div>
+        </section>
 
         <section class="calendar-main-grid">
-          <article id="calendarPanel" class="panel form-panel calendar-panel"><div class="calendar-legend"><span class="legend-exam">시험·시험기간</span><span class="legend-study">공부 일정</span><span class="legend-task">과제</span></div><div class="calendar-week"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div><div id="calendarGrid" class="calendar-grid"></div></article>
+          <article id="calendarPanel" class="panel form-panel calendar-panel">
+            <div class="calendar-legend">
+              <span class="legend-exam">시험·시험기간</span
+              ><span class="legend-study">공부 일정</span
+              ><span class="legend-task">과제</span>
+            </div>
+            <div class="calendar-week">
+              <span>일</span><span>월</span><span>화</span><span>수</span
+              ><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+          </article>
           <aside class="calendar-side-stack">
-            <section class="panel flow-panel selected-schedule-panel"><div class="panel-heading"><div><span class="section-label">선택 날짜</span><h2 id="selectedScheduleTitle">오늘 일정</h2></div></div><div id="selectedScheduleList" class="selected-schedule-list empty">일정이 없습니다.</div></section>
-            <section class="panel flow-panel"><span class="section-label">이번 달 분석</span><div class="analysis-list"><div><span>완료율</span><strong id="doneRate">0%</strong></div><div><span>집중 필요 과목</span><strong id="riskCourse">없음</strong></div><div><span>전체 일정</span><strong id="monthTaskCount">0건</strong></div></div><div id="courseBars" class="course-bars"></div></section>
+            <section class="panel flow-panel selected-schedule-panel">
+              <div class="panel-heading">
+                <div>
+                  <span class="section-label">선택 날짜</span>
+                  <h2 id="selectedScheduleTitle">오늘 일정</h2>
+                </div>
+              </div>
+              <div
+                id="selectedScheduleList"
+                class="selected-schedule-list empty"
+              >
+                일정이 없습니다.
+              </div>
+            </section>
+            <section class="panel flow-panel">
+              <span class="section-label">이번 달 분석</span>
+              <div class="analysis-list">
+                <div><span>완료율</span><strong id="doneRate">0%</strong></div>
+                <div>
+                  <span>집중 필요 과목</span
+                  ><strong id="riskCourse">없음</strong>
+                </div>
+                <div>
+                  <span>전체 일정</span><strong id="monthTaskCount">0건</strong>
+                </div>
+              </div>
+              <div id="courseBars" class="course-bars"></div>
+            </section>
           </aside>
         </section>
 
-        <section class="panel result-panel"><div class="panel-heading"><div><span class="section-label">전체 일정</span><h2>등록한 일정</h2><p id="taskSummary">등록된 일정이 없습니다.</p></div><button id="clearDoneTasks" class="secondary" type="button">완료 일정 정리</button></div><div id="taskList" class="task-list empty">일정을 추가하면 여기에 표시됩니다.</div></section>
+        <section class="panel result-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="section-label">전체 일정</span>
+              <h2>등록한 일정</h2>
+              <p id="taskSummary">등록된 일정이 없습니다.</p>
+            </div>
+            <button id="clearDoneTasks" class="secondary" type="button">
+              완료 일정 정리
+            </button>
+          </div>
+          <div id="taskList" class="task-list empty">
+            일정을 추가하면 여기에 표시됩니다.
+          </div>
+        </section>
       </section>
 
-      <div id="taskModal" class="modal-backdrop" hidden><form id="taskForm" class="modal-panel wide-modal"><div class="modal-heading"><div><span class="section-label">새 일정</span><h2>일정 추가하기</h2></div><button id="closeTaskModal" class="icon-button" type="button">×</button></div><div class="grid two"><label class="field"><span>일정명</span><input id="taskTitle" type="text" required /></label><label class="field"><span>과목</span><input id="taskCourse" type="text" /></label></div><div class="grid two"><label class="field"><span>일정 종류</span><select id="taskType"><option>과제</option><option>시험</option><option>시험기간</option><option>공부</option></select></label><label class="field"><span>진행률</span><input id="taskProgress" type="number" min="0" max="100" value="0" /></label></div><div class="grid two"><label class="field"><span>시작일</span><input id="taskDate" type="date" required /></label><label class="field"><span>종료일</span><input id="taskEndDate" type="date" /></label></div><div class="button-row modal-actions"><button id="cancelTaskModal" class="secondary" type="button">취소</button><button class="primary inline-primary" type="submit">일정 추가</button></div></form></div>
+      <div id="taskModal" class="modal-backdrop" hidden>
+        <form id="taskForm" class="modal-panel wide-modal">
+          <div class="modal-heading">
+            <div>
+              <span class="section-label">새 일정</span>
+              <h2>일정 추가하기</h2>
+            </div>
+            <button id="closeTaskModal" class="icon-button" type="button">
+              ×
+            </button>
+          </div>
+          <div class="grid two">
+            <label class="field"
+              ><span>일정명</span
+              ><input id="taskTitle" type="text" required /></label
+            ><label class="field"
+              ><span>과목</span><input id="taskCourse" type="text"
+            /></label>
+          </div>
+          <div class="grid two">
+            <label class="field"
+              ><span>일정 종류</span
+              ><select id="taskType">
+                <option>과제</option>
+                <option>시험</option>
+                <option>시험기간</option>
+                <option>공부</option>
+              </select></label
+            ><label class="field"
+              ><span>진행률</span
+              ><input
+                id="taskProgress"
+                type="number"
+                min="0"
+                max="100"
+                value="0"
+            /></label>
+          </div>
+          <div class="grid two">
+            <label class="field"
+              ><span>시작일</span
+              ><input id="taskDate" type="date" required /></label
+            ><label class="field"
+              ><span>종료일</span><input id="taskEndDate" type="date"
+            /></label>
+          </div>
+          <div class="button-row modal-actions">
+            <button id="cancelTaskModal" class="secondary" type="button">
+              취소</button
+            ><button class="primary inline-primary" type="submit">
+              일정 추가
+            </button>
+          </div>
+        </form>
+      </div>
     </main>
     <script src="./app.js"></script>
   </body>
