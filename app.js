@@ -1877,11 +1877,45 @@ function compactQuestionText(value) {
     .trim();
 }
 
+function latexifyExpression(expr) {
+  return String(expr || "")
+    .replace(/→/g, "\\to ")
+    .replace(/->/g, "\\to ")
+    .replace(/<=/g, "\\le ")
+    .replace(/>=/g, "\\ge ")
+    .replace(/!=/g, "\\ne ")
+    .replace(/\*/g, "")
+    .replace(/(sin|cos|tan|log|ln)\s*\(/gi, (_, fn) => `\\${fn.toLowerCase()}(`)
+    .replace(/([a-zA-Z])\^(\d+)/g, (_, base, power) => `${base}^{${power}}`)
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeInlineMathText(value) {
+  let text = compactQuestionText(value);
+
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, expr) => `\\(${latexifyExpression(expr)}\\)`);
+  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, expr) => `\\(${latexifyExpression(expr)}\\)`);
+  text = text.replace(/\$([^$]+)\$/g, (_, expr) => `\\(${latexifyExpression(expr)}\\)`);
+
+  text = text.replace(/lim\s*x\s*(?:->|→|to)\s*([^\s,.)]+)\s+([^의을를값구계]+?)(?=의|을|를|값|구|계|$)/gi, (_, target, expr) => {
+    return `\\(\\lim_{x\\to ${target}} ${latexifyExpression(expr)}\\)`;
+  });
+
+  text = text.replace(/f\(x\)\s*=\s*([^,.;]+?)(?=의|에서|을|를|,|\.|;|$)/g, (_, expr) => {
+    return `\\(f(x)=${latexifyExpression(expr)}\\)`;
+  });
+
+  text = text.replace(/f'\(x\)\s*=\s*([^,.;]+?)(?=의|에서|을|를|,|\.|;|$)/g, (_, expr) => {
+    return `\\(f'(x)=${latexifyExpression(expr)}\\)`;
+  });
+
+  text = text.replace(/x\^(\d+)/g, (_, power) => `\\(x^{${power}}\\)`);
+  return text;
+}
+
 function renderQuestionText(value) {
-  const text = compactQuestionText(value)
-    .replace(/\\\(([\s\S]*?)\\\)/g, (_, expr) => expr.trim())
-    .replace(/\$([^$]+)\$/g, (_, expr) => expr.trim());
-  return escapeHtmlRaw(text);
+  return escapeHtmlRaw(normalizeInlineMathText(value));
 }
 function renderQuestions(payload) {
   const questions = normalizeQuestions(payload);
