@@ -58,6 +58,15 @@ const summaryStatus = $("#summaryStatus");
 const courseSummary = $("#courseSummary");
 const courseSummaryMeta = $("#courseSummaryMeta");
 
+function normalizeScheduleTask(task, completedIds = new Set()) {
+  const completed = Boolean(task?.done) || completedIds.has(task?.id) || Number(task?.progress) >= 100;
+  const { progress, previousProgress, ...taskWithoutProgress } = task || {};
+  return {
+    ...taskWithoutProgress,
+    done: completed
+  };
+}
+
 function loadProfile() {
   try {
     return { name: "", major: "", photo: "", ...JSON.parse(localStorage.getItem(profileKey) || "{}") };
@@ -103,6 +112,7 @@ function loadPlannerState() {
     studySeconds: 0,
     studyDate: todayText(),
     hiddenAutoTaskIds: [],
+    previousSemesterGrades: [],
     activeCourseId: "course-default",
     courses: [
       {
@@ -124,7 +134,6 @@ function loadPlannerState() {
         course: "인간과 환경의 이해",
         type: "시험",
         date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3).toISOString().slice(0, 10),
-        progress: 35,
         done: false
       },
       {
@@ -133,7 +142,6 @@ function loadPlannerState() {
         course: "교양심리",
         type: "과제",
         date: new Date(Date.now() + 1000 * 60 * 60 * 24 * 6).toISOString().slice(0, 10),
-        progress: 70,
         done: false
       }
     ]
@@ -145,6 +153,16 @@ function loadPlannerState() {
     if (loaded.studyDate && loaded.studyDate !== today) loaded.studySeconds = 0;
     loaded.studyDate = today;
     if (!Array.isArray(loaded.hiddenAutoTaskIds)) loaded.hiddenAutoTaskIds = [];
+    if (!Array.isArray(loaded.previousSemesterGrades)) loaded.previousSemesterGrades = [];
+    if (!Array.isArray(loaded.tasks)) loaded.tasks = [];
+    let legacyCompleted = new Set();
+    try {
+      legacyCompleted = new Set(JSON.parse(localStorage.getItem("hakjum-completed-task-ids-v1") || "[]"));
+    } catch {
+      legacyCompleted = new Set();
+    }
+    loaded.tasks = loaded.tasks.map((task) => normalizeScheduleTask(task, legacyCompleted));
+    if (legacyCompleted.size) localStorage.removeItem("hakjum-completed-task-ids-v1");
     return loaded;
   } catch {
     return fallback;
@@ -160,9 +178,12 @@ function savePlannerState() {
 function syncCourseExamTask(course) {
   if (!course?.id) return;
   const taskId = `exam-${course.id}`;
+  const existing = state.tasks.find((task) => task.id === taskId);
   state.tasks = state.tasks.filter((task) => task.id !== taskId);
 
   if (!course.examDate) return;
+  if (course.hiddenExamTaskDate === course.examDate) return;
+  delete course.hiddenExamTaskDate;
 
   state.tasks.push({
     id: taskId,
@@ -170,8 +191,7 @@ function syncCourseExamTask(course) {
     course: course.name || "과목 없음",
     type: "시험",
     date: course.examDate,
-    progress: 0,
-    done: false,
+    done: existing?.done ?? false,
     courseExam: true
   });
 }
@@ -251,6 +271,8 @@ async function loadPlannerStateFromSupabase() {
 
   if (!error && data?.state) {
     Object.assign(state, data.state);
+    state.tasks = (Array.isArray(state.tasks) ? state.tasks : []).map((task) => normalizeScheduleTask(task));
+    if (!Array.isArray(state.previousSemesterGrades)) state.previousSemesterGrades = [];
     localStorage.setItem(plannerKey, JSON.stringify(state));
     renderAll();
   }
@@ -317,6 +339,7 @@ function renderAll() {
   if ($("#calendarGrid")) renderCalendar();
   if ($("#doneRate")) renderAnalysis();
   if ($("#gradeProjectionForm")) renderGradeProjectionForm();
+  if ($("#previousGradeList")) renderPreviousSemesterGrades();
   if ($("#timerDisplay")) renderTimer();
 }
 
@@ -429,7 +452,6 @@ function buildAutoTasksForCourse(course) {
       course: course.name,
       type: index === taskCount - 1 ? "시험 대비" : "공부",
       date: toDateText(date),
-      progress: Math.max(10, Math.min(85, Math.round(100 - plan.load + index * 8))),
       done: false,
       minutes: plan.dailyMinutes,
       reason: `${projectionReason} · D-${plan.daysLeft}`,
@@ -446,10 +468,12 @@ function ensureAutoStudyPlan() {
   if (!Array.isArray(state.courses)) return;
   state.courses.forEach(migrateCourseGoalFields);
   state.courses.forEach(syncCourseExamTask);
-  const manualDoneIds = new Set(
+  const savedAutoState = new Map(
     state.tasks
-      .filter((task) => task.autoPlan && task.done)
-      .map((task) => task.id)
+      .filter((task) => task.autoPlan)
+      .map((task) => [task.id, {
+        done: Boolean(task.done)
+      }])
   );
   if (!Array.isArray(state.hiddenAutoTaskIds)) state.hiddenAutoTaskIds = [];
   const hiddenAutoTaskIds = new Set(state.hiddenAutoTaskIds);
@@ -457,10 +481,10 @@ function ensureAutoStudyPlan() {
   const autoTasks = state.courses
     .flatMap(buildAutoTasksForCourse)
     .filter((task) => !hiddenAutoTaskIds.has(task.id))
-    .map((task) => ({
-      ...task,
-      done: manualDoneIds.has(task.id)
-    }));
+    .map((task) => {
+      const saved = savedAutoState.get(task.id);
+      return saved ? { ...task, ...saved } : task;
+    });
   state.tasks = [...manualTasks, ...autoTasks].sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -478,7 +502,10 @@ function renderDashboard() {
   const nearest = upcoming[0];
   const autoTasks = getAutoTasks();
   const todayAutoTasks = autoTasks.filter((task) => task.date === todayText());
-  const todayTasks = state.tasks.filter((task) => task.date <= todayText() && (task.endDate || task.date) >= todayText());
+  const todayTasks = state.tasks.filter((task) => {
+    if (isExamDayTask(task)) return task.date === todayText();
+    return task.date <= todayText() && (task.endDate || task.date) >= todayText();
+  });
   const plannedMinutes = todayAutoTasks.reduce((sum, task) => sum + (Number(task.minutes) || 0), 0);
   const studiedMinutes = Math.floor((Number(state.studySeconds) || 0) / 60);
   const dailyPercent = plannedMinutes ? Math.min(100, Math.round((studiedMinutes / plannedMinutes) * 100)) : 0;
@@ -491,8 +518,10 @@ function renderDashboard() {
   if ($("#gpaPercent")) $("#gpaPercent").textContent = `${percent}%`;
   if ($("#gpaMeter")) $("#gpaMeter").style.width = `${dailyPercent}%`;
   $("#gpaHint").textContent = gap === "0.00" ? "목표 GPA를 달성했어요." : `목표까지 ${gap} 남았어요.`;
-  $("#gpaBadge").textContent = todayAutoTasks.length ? `오늘 ${todayAutoTasks.length}개` : "계획 대기";
-  $("#gpaBadge").className = `badge ${autoTasks.length ? "ok" : ""}`;
+  if ($("#gpaBadge")) {
+    $("#gpaBadge").textContent = todayAutoTasks.length ? `오늘 ${todayAutoTasks.length}개` : "계획 대기";
+    $("#gpaBadge").className = `badge ${autoTasks.length ? "ok" : ""}`;
+  }
   $("#upcomingCount").textContent = `${upcoming.length}건`;
   $("#nearestTask").textContent = nearest
     ? `${nearest.title} · ${formatDate(nearest.date)}`
@@ -506,7 +535,7 @@ function renderDashboard() {
   if ($("#totalStudyTime")) $("#totalStudyTime").textContent = formatStudyDuration(state.studySeconds);
   if ($("#dashboardSummary")) $("#dashboardSummary").textContent = `${state.courses.length}개 과목 · 남은 일정 ${upcoming.length}개 · 오늘 공부 ${formatStudyDuration(state.studySeconds)}`;
   renderTodaySchedule(todayTasks);
-  renderOverviewGraph();
+  renderAcademicBriefing();
   renderAutoPlanDashboard(autoTasks, todayAutoTasks);
   renderCourseGoalDashboard();
 }
@@ -521,35 +550,78 @@ function formatStudyDuration(seconds) {
 function renderTodaySchedule(tasks) {
   const list = $("#todayScheduleList");
   if (!list) return;
-  if ($("#todayScheduleMeta")) $("#todayScheduleMeta").textContent = tasks.length ? `오늘 ${tasks.length}개의 일정이 있어요.` : "오늘은 등록된 일정이 없어요.";
+  const remaining = tasks.filter((task) => !task.done).length;
+  if ($("#todayScheduleMeta")) $("#todayScheduleMeta").textContent = tasks.length ? `오늘 ${tasks.length}개 중 ${remaining}개가 남았어요.` : "오늘은 등록된 일정이 없어요.";
   if (!tasks.length) {
     list.className = "today-schedule-list empty";
     list.textContent = "오늘 일정이 없습니다.";
     return;
   }
   list.className = "today-schedule-list";
-  list.innerHTML = tasks.slice(0, 6).map((task) => `<article class="today-schedule-item ${getTaskTone(task)}"><span>${escapeHtml(task.type)}</span><div><strong>${escapeHtml(task.title)}</strong><small>${escapeHtml(task.course || "과목 없음")} · ${task.progress || 0}%</small></div></article>`).join("");
+  list.innerHTML = tasks.slice(0, 6).map((task) => `
+    <article class="today-schedule-item ${task.done ? "done" : ""} ${getTaskTone(task)}">
+      <button class="today-task-check" type="button" data-task-id="${task.id}" aria-pressed="${task.done}" aria-label="${escapeHtml(task.title)} ${task.done ? "완료 취소" : "완료 체크"}">
+        <span aria-hidden="true">${task.done ? "✓" : ""}</span>
+      </button>
+      <div><strong>${escapeHtml(task.title)}</strong><small>${escapeHtml(task.course || "과목 없음")} · ${task.done ? "완료" : "미완료"}</small></div>
+      <em>${escapeHtml(task.type)}</em>
+    </article>
+  `).join("");
 }
 
-function renderOverviewGraph() {
-  const graph = $("#gradeOverviewGraph");
-  if (!graph) return;
-  if (!state.courses.length) {
-    graph.className = "overview-graph empty";
-    graph.textContent = "과목을 추가하면 그래프가 표시됩니다.";
-    return;
-  }
-  graph.className = "overview-graph";
-  graph.innerHTML = state.courses.slice(0, 6).map((course) => {
-    const current = Math.max(0, Math.min(100, Number(course.currentScore) || 0));
-    const target = Math.max(current, Math.min(100, Number(course.targetScore) || 0));
-    return `<div class="overview-bar"><span>${escapeHtml(course.name)}</span><div class="overview-track"><i style="width:${target}%"></i><b style="width:${current}%"></b></div><small>${current} / ${target}</small></div>`;
-  }).join("");
+function renderAcademicBriefing() {
+  const list = $("#academicBriefing");
+  if (!list) return;
+  const today = todayText();
+  const todayTasks = state.tasks.filter((task) => {
+    if (isExamDayTask(task)) return task.date === today;
+    return task.date <= today && (task.endDate || task.date) >= today;
+  });
+  const remainingToday = todayTasks.filter((task) => !task.done).length;
+  const overdue = state.tasks.filter((task) => !task.done && (task.endDate || task.date) < today).length;
+  const nextExam = state.tasks
+    .filter((task) => isExamDayTask(task) && task.date >= today)
+    .sort((a, b) => a.date.localeCompare(b.date))[0];
+  const examDays = nextExam ? Math.ceil((new Date(`${nextExam.date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000) : null;
+  const alerts = [
+    {
+      tone: remainingToday ? "attention" : "clear",
+      label: "오늘 할 일",
+      value: remainingToday ? `${remainingToday}개 남음` : "모두 완료",
+      detail: todayTasks.length ? `전체 ${todayTasks.length}개 일정` : "등록된 오늘 일정이 없습니다.",
+      href: "#todayScheduleList"
+    },
+    {
+      tone: nextExam && examDays <= 7 ? "urgent" : "normal",
+      label: "다음 시험",
+      value: nextExam ? (examDays === 0 ? "오늘" : `D-${examDays}`) : "시험일 미등록",
+      detail: nextExam ? `${nextExam.course || "과목 없음"} · ${formatDate(nextExam.date)}` : "과목에서 시험일을 등록하세요.",
+      href: nextExam ? "./calendar.html" : "./study.html"
+    },
+    {
+      tone: overdue ? "urgent" : "clear",
+      label: "기한 지난 일정",
+      value: overdue ? `${overdue}개 확인` : "없음",
+      detail: overdue ? "완료 여부를 확인해 주세요." : "밀린 일정이 없습니다.",
+      href: "./calendar.html"
+    }
+  ];
+  list.className = "academic-briefing";
+  list.innerHTML = alerts.map((alert) => `
+    <a class="academic-alert ${alert.tone}" href="${alert.href}">
+      <span>${alert.label}</span><strong>${alert.value}</strong><small>${alert.detail}</small><b aria-hidden="true">→</b>
+    </a>
+  `).join("");
+}
+
+function isExamDayTask(task) {
+  return Boolean(task?.courseExam) || String(task?.type || "").trim() === "시험";
 }
 
 function getTaskTone(task) {
   const type = String(task?.type || "");
-  if (type.includes("시험")) return "exam";
+  if (isExamDayTask(task)) return "exam";
+  if (type.includes("시험기간")) return "exam-period";
   if (type.includes("공부")) return "study";
   return "assignment";
 }
@@ -645,7 +717,7 @@ function renderTasks() {
   const doneCount = tasks.filter((task) => task.done).length;
 
   $("#taskSummary").textContent = tasks.length
-    ? `전체 ${tasks.length}건 · 완료 ${doneCount}건 · 진행 중 ${tasks.length - doneCount}건`
+    ? `전체 ${tasks.length}건 · 완료 ${doneCount}건 · 미완료 ${tasks.length - doneCount}건`
     : "등록된 일정이 없습니다.";
 
   if (!tasks.length) {
@@ -659,21 +731,18 @@ function renderTasks() {
     .map(
       (task) => `
         <article class="task-item ${task.done ? "done" : ""} ${getTaskTone(task)}">
-          <div>
+          <button class="task-check-button" type="button" data-action="toggle" data-id="${task.id}" aria-pressed="${task.done}" aria-label="${escapeHtml(task.title)} ${task.done ? "완료 취소" : "완료 체크"}"><span aria-hidden="true">${task.done ? "✓" : ""}</span></button>
+          <div class="task-copy">
             <h3>${escapeHtml(task.title)}</h3>
             <div class="task-meta">
               <span>${escapeHtml(task.type)}</span>
               <span>${escapeHtml(task.course || "과목 없음")}</span>
               <span>${formatDate(task.date)}${task.endDate && task.endDate !== task.date ? ` ~ ${formatDate(task.endDate)}` : ""}</span>
-              <span>${task.progress}%</span>
+              <span>${task.done ? "완료" : "미완료"}</span>
             </div>
-            <div class="mini-meter"><span style="width:${task.progress}%"></span></div>
           </div>
           <div class="task-actions">
-            <button class="secondary" type="button" data-action="toggle" data-id="${task.id}">
-              ${task.done ? "되돌리기" : "완료"}
-            </button>
-            <button class="secondary" type="button" data-action="delete" data-id="${task.id}">삭제</button>
+            <button class="secondary danger-action" type="button" data-action="delete" data-id="${task.id}">일정 영구 삭제</button>
           </div>
         </article>
       `
@@ -1037,16 +1106,20 @@ function renderCalendar() {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     const text = toDateText(date);
-    const items = state.tasks.filter((task) => task.date <= text && (task.endDate || task.date) >= text);
+    const items = state.tasks.filter((task) => {
+      if (isExamDayTask(task)) return task.date === text;
+      return task.date <= text && (task.endDate || task.date) >= text;
+    });
     const muted = date.getMonth() !== month ? "muted" : "";
     const selected = text === selectedCalendarDate ? "selected" : "";
     const today = text === todayText() ? "today" : "";
+    const examDay = items.some(isExamDayTask) ? "exam-date" : "";
 
     return `
-      <button class="calendar-day ${muted} ${selected} ${today}" type="button" data-date="${text}">
+      <button class="calendar-day ${muted} ${selected} ${today} ${examDay}" type="button" data-date="${text}">
         <strong>${date.getDate()}</strong>
         <div class="dot-list">
-          ${items.slice(0, 3).map((item) => `<span class="dot ${getTaskTone(item)}">${escapeHtml(item.type)} · ${escapeHtml(item.title)}</span>`).join("")}
+          ${items.slice(0, 3).map((item) => `<span class="dot ${item.done ? "done" : ""} ${getTaskTone(item)}">${item.done ? "✓ " : ""}${isExamDayTask(item) ? "시험일" : escapeHtml(item.type)} · ${escapeHtml(item.title)}</span>`).join("")}
           ${items.length > 3 ? `<span class="calendar-more">+${items.length - 3}</span>` : ""}
         </div>
       </button>
@@ -1074,13 +1147,16 @@ function populateCalendarSelectors(year, month) {
 function renderSelectedDateSchedule() {
   const list = $("#selectedScheduleList");
   const inline = $("#selectedDateInline");
-  const tasks = state.tasks.filter((task) => task.date <= selectedCalendarDate && (task.endDate || task.date) >= selectedCalendarDate);
+  const tasks = state.tasks.filter((task) => {
+    if (isExamDayTask(task)) return task.date === selectedCalendarDate;
+    return task.date <= selectedCalendarDate && (task.endDate || task.date) >= selectedCalendarDate;
+  });
   const formatted = formatDate(selectedCalendarDate);
   if ($("#selectedScheduleTitle")) $("#selectedScheduleTitle").textContent = `${formatted} 일정`;
   if ($("#selectedDateLabel")) $("#selectedDateLabel").textContent = formatted;
   if ($("#selectedDateCount")) $("#selectedDateCount").textContent = `일정 ${tasks.length}개`;
   const markup = tasks.length
-    ? tasks.map((task) => `<article class="selected-schedule-item ${getTaskTone(task)}"><span>${escapeHtml(task.type)}</span><div><strong>${escapeHtml(task.title)}</strong><small>${escapeHtml(task.course || "과목 없음")}${task.endDate && task.endDate !== task.date ? ` · ${formatDate(task.date)}~${formatDate(task.endDate)}` : ""}</small></div></article>`).join("")
+    ? tasks.map((task) => `<article class="selected-schedule-item ${task.done ? "done" : ""} ${getTaskTone(task)}"><span>${escapeHtml(task.type)}</span><div><strong>${escapeHtml(task.title)}</strong><small>${escapeHtml(task.course || "과목 없음")}${task.endDate && task.endDate !== task.date ? ` · ${formatDate(task.date)}~${formatDate(task.endDate)}` : ""} · ${task.done ? "완료" : "미완료"}</small></div></article>`).join("")
     : "";
   if (list) {
     list.className = tasks.length ? "selected-schedule-list" : "selected-schedule-list empty";
@@ -1092,19 +1168,22 @@ function renderSelectedDateSchedule() {
 function renderAnalysis() {
   if (!$("#doneRate")) return;
   const tasks = state.tasks;
-  const doneRate = tasks.length ? Math.round((tasks.filter((task) => task.done).length / tasks.length) * 100) : 0;
   const monthPrefix = `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, "0")}`;
   const monthTasks = tasks.filter((task) => task.date.startsWith(monthPrefix));
-  const courseMap = tasks.reduce((acc, task) => {
+  const doneCount = monthTasks.filter((task) => task.done).length;
+  const doneRatio = monthTasks.length ? Math.round((doneCount / monthTasks.length) * 100) : 0;
+  const courseMap = monthTasks.reduce((acc, task) => {
     const course = task.course || "과목 없음";
-    acc[course] = acc[course] || { total: 0, pending: 0 };
+    acc[course] = acc[course] || { total: 0, pending: 0, done: 0 };
     acc[course].total += 1;
+    if (task.done) acc[course].done += 1;
     if (!task.done) acc[course].pending += 1;
     return acc;
   }, {});
   const risky = Object.entries(courseMap).sort((a, b) => b[1].pending - a[1].pending)[0];
 
-  $("#doneRate").textContent = `${doneRate}%`;
+  $("#doneRate").textContent = `${doneCount}/${monthTasks.length}`;
+  $("#doneRate").closest("div")?.style.setProperty("--completion-deg", `${doneRatio * 3.6}deg`);
   $("#riskCourse").textContent = risky && risky[1].pending ? risky[0] : "없음";
   $("#monthTaskCount").textContent = `${monthTasks.length}건`;
 
@@ -1112,16 +1191,48 @@ function renderAnalysis() {
   $("#courseBars").innerHTML = bars.length
     ? bars
         .map(([course, value]) => {
-          const progress = Math.round(((value.total - value.pending) / value.total) * 100);
+          const progress = value.total ? Math.round((value.done / value.total) * 100) : 0;
           return `
             <div class="course-bar">
-              <span><b>${escapeHtml(course)}</b><b>${progress}%</b></span>
+              <span><b>${escapeHtml(course)}</b><b>${value.done}/${value.total}</b></span>
               <div class="mini-meter"><span style="width:${progress}%"></span></div>
             </div>
           `;
         })
         .join("")
     : `<div class="empty">분석할 일정이 없습니다.</div>`;
+}
+
+function renderPreviousSemesterGrades() {
+  const list = $("#previousGradeList");
+  if (!list) return;
+  if (!Array.isArray(state.previousSemesterGrades)) state.previousSemesterGrades = [];
+  const records = [...state.previousSemesterGrades].sort((a, b) => String(b.term).localeCompare(String(a.term), "ko"));
+  const totalCredits = records.reduce((sum, record) => sum + (Number(record.credits) || 0), 0);
+  const weightedAverage = totalCredits
+    ? records.reduce((sum, record) => sum + (Number(record.gpa) || 0) * (Number(record.credits) || 0), 0) / totalCredits
+    : null;
+
+  if ($("#currentGpa") && document.activeElement !== $("#currentGpa")) $("#currentGpa").value = (Number(state.currentGpa) || 0).toFixed(2);
+  if ($("#targetGpa") && document.activeElement !== $("#targetGpa")) $("#targetGpa").value = (Number(state.targetGpa) || 0).toFixed(2);
+  $("#previousGradeCount").textContent = `${records.length}개`;
+  $("#previousGradeCreditTotal").textContent = `${totalCredits}학점`;
+  $("#previousGradeAverage").textContent = weightedAverage === null ? "-" : weightedAverage.toFixed(2);
+
+  if (!records.length) {
+    list.className = "previous-grade-list empty";
+    list.textContent = "등록된 이전 학기 성적이 없습니다.";
+    return;
+  }
+
+  list.className = "previous-grade-list";
+  list.innerHTML = records.map((record) => `
+    <article class="previous-grade-item">
+      <div><strong>${escapeHtml(record.term)}</strong><small>${Number(record.credits) || 0}학점 이수</small></div>
+      <b>${Number(record.gpa).toFixed(2)}</b>
+      <button class="secondary" type="button" data-previous-grade-delete="${record.id}" aria-label="${escapeHtml(record.term)} 성적 삭제">삭제</button>
+    </article>
+  `).join("");
 }
 
 function renderGradeProjectionForm() {
@@ -2181,6 +2292,7 @@ $$("button.tab[data-view]").forEach((button) => {
 $("#currentGpa")?.addEventListener("input", (event) => {
   state.currentGpa = Number(event.target.value);
   savePlannerState();
+  $$("#headerGpa").forEach((node) => { node.textContent = (Number(state.currentGpa) || 0).toFixed(2); });
   renderDashboard();
 });
 
@@ -2188,6 +2300,29 @@ $("#targetGpa")?.addEventListener("input", (event) => {
   state.targetGpa = Number(event.target.value);
   savePlannerState();
   renderDashboard();
+});
+
+$("#previousGradeForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const term = $("#previousGradeTerm").value.trim();
+  const gpa = Number($("#previousGradeGpa").value);
+  const credits = Number($("#previousGradeCredits").value);
+  if (!term || !Number.isFinite(gpa) || gpa < 0 || gpa > 4.5 || !Number.isFinite(credits) || credits <= 0) return;
+  if (!Array.isArray(state.previousSemesterGrades)) state.previousSemesterGrades = [];
+  state.previousSemesterGrades.push({ id: crypto.randomUUID(), term, gpa, credits });
+  event.currentTarget.reset();
+  savePlannerState();
+  renderPreviousSemesterGrades();
+});
+
+$("#previousGradeList")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-previous-grade-delete]");
+  if (!button) return;
+  const record = state.previousSemesterGrades.find((item) => item.id === button.dataset.previousGradeDelete);
+  if (!record || !window.confirm(`${record.term} 성적 기록을 삭제할까요?`)) return;
+  state.previousSemesterGrades = state.previousSemesterGrades.filter((item) => item.id !== record.id);
+  savePlannerState();
+  renderPreviousSemesterGrades();
 });
 
 $("#attendanceInput")?.addEventListener("input", (event) => {
@@ -2230,11 +2365,9 @@ $("#taskForm")?.addEventListener("submit", (event) => {
     type: $("#taskType").value,
     date: startDate,
     endDate,
-    progress: Math.max(0, Math.min(100, Number($("#taskProgress").value) || 0)),
     done: false
   });
   event.currentTarget.reset();
-  $("#taskProgress").value = 0;
   $("#taskDate").value = todayText();
   if ($("#taskEndDate")) $("#taskEndDate").value = todayText();
   savePlannerState();
@@ -2265,6 +2398,20 @@ $("#calendarGrid")?.addEventListener("click", (event) => {
   renderCalendar();
 });
 
+function toggleTaskCompletion(taskId) {
+  const task = state.tasks.find((item) => item.id === taskId);
+  if (!task) return;
+  task.done = !task.done;
+  savePlannerState();
+  renderAll();
+}
+
+$("#todayScheduleList")?.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-task-id]");
+  if (!button) return;
+  toggleTaskCompletion(button.dataset.taskId);
+});
+
 $("#taskList")?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
@@ -2272,6 +2419,13 @@ $("#taskList")?.addEventListener("click", (event) => {
   const task = state.tasks.find((item) => item.id === taskId);
 
   if (button.dataset.action === "delete") {
+    if (!task) return;
+    if (!window.confirm(`'${task.title}' 일정을 영구 삭제할까요? 삭제한 일정은 복구할 수 없습니다.`)) return;
+    if (task.courseExam) {
+      const courseId = task.id.replace(/^exam-/, "");
+      const course = state.courses.find((item) => item.id === courseId);
+      if (course) course.hiddenExamTaskDate = course.examDate;
+    }
     if (task?.autoPlan) {
       if (!Array.isArray(state.hiddenAutoTaskIds)) state.hiddenAutoTaskIds = [];
       if (!state.hiddenAutoTaskIds.includes(taskId)) state.hiddenAutoTaskIds.push(taskId);
@@ -2282,18 +2436,12 @@ $("#taskList")?.addEventListener("click", (event) => {
     return;
   }
 
-  if (!task) return;
-
   if (button.dataset.action === "toggle") {
-    if (task.autoPlan) {
-      if (!Array.isArray(state.hiddenAutoTaskIds)) state.hiddenAutoTaskIds = [];
-      if (!state.hiddenAutoTaskIds.includes(taskId)) state.hiddenAutoTaskIds.push(taskId);
-    }
-    state.tasks = state.tasks.filter((item) => item.id !== taskId);
+    toggleTaskCompletion(taskId);
+    return;
   }
 
-  savePlannerState();
-  renderAll();
+  if (!task) return;
 });
 
 $("#gradeProjectionForm")?.addEventListener("submit", async (event) => {
@@ -2340,6 +2488,22 @@ $("#gradeCourseSelect")?.addEventListener("change", () => {
 });
 
 $("#clearDoneTasks")?.addEventListener("click", () => {
+  const doneCount = state.tasks.filter((task) => task.done).length;
+  if (!doneCount) return;
+  if (!window.confirm(`완료된 일정 ${doneCount}개를 영구 삭제할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+  if (!Array.isArray(state.hiddenAutoTaskIds)) state.hiddenAutoTaskIds = [];
+  state.tasks
+    .filter((task) => task.done && task.autoPlan)
+    .forEach((task) => {
+      if (!state.hiddenAutoTaskIds.includes(task.id)) state.hiddenAutoTaskIds.push(task.id);
+    });
+  state.tasks
+    .filter((task) => task.done && task.courseExam)
+    .forEach((task) => {
+      const courseId = task.id.replace(/^exam-/, "");
+      const course = state.courses.find((item) => item.id === courseId);
+      if (course) course.hiddenExamTaskDate = course.examDate;
+    });
   state.tasks = state.tasks.filter((task) => !task.done);
   savePlannerState();
   renderAll();

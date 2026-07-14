@@ -74,46 +74,24 @@
 
         <section class="panel main-timer-panel">
           <div class="main-timer-copy"><span class="section-label">공부 타이머</span><h2>메인에서 바로 집중 시작</h2><p>시작과 중단만 사용하며 완료된 시간은 오늘 누적 시간에 합산됩니다.</p></div>
-          <div class="timer-context"><span>기록 기준</span><strong>전체 과목 공부시간</strong></div>
-          <div class="main-timer-time"><span>현재 집중 시간</span><strong id="timerDisplay">00:00:00</strong><small id="studyTotal">오늘 누적 공부 시간 0분</small></div>
-          <div class="main-timer-actions"><button id="startTimer" class="primary inline-primary" type="button">시작</button><button id="stopTimer" class="secondary" type="button">중단</button></div>
+          <label class="field enhanced-timer-course"><span>공부할 과목</span><select id="enhancedTimerCourse" aria-label="타이머 과목 선택"></select></label>
+          <div class="main-timer-time"><span>선택 과목 집중 시간</span><strong id="enhancedTimerDisplay">00:00:00</strong><small id="enhancedStudyTotal">오늘 누적 공부 시간 0분</small></div>
+          <div class="main-timer-actions"><button id="enhancedStartTimer" class="primary inline-primary" type="button">시작</button><button id="enhancedPauseTimer" class="secondary" type="button">중단</button></div>
         </section>
 
         <section class="dashboard-columns">
-          <article class="panel grade-graph-panel">
+          <article class="panel academic-brief-panel">
             <div class="panel-heading">
               <div>
-                <span class="section-label">성적 흐름</span>
-                <h2>현재에서 목표까지</h2>
-                <p>과목별 현재 점수와 목표 점수를 선형 그래프로 비교합니다.</p>
+                <span class="section-label">학업 알림</span>
+                <h2>지금 확인할 내용</h2>
+                <p>오늘 일정과 가까운 시험을 간단히 알려드려요.</p>
               </div>
-              <span id="gpaBadge" class="badge ok">계획 생성</span>
+              <a class="text-link" href="./calendar.html">일정 보기 →</a>
             </div>
-            <div id="gradeOverviewGraph" class="overview-graph empty">
-              과목을 추가하면 그래프가 표시됩니다.
+            <div id="academicBriefing" class="academic-briefing empty">
+              학업 알림을 정리하고 있습니다.
             </div>
-            <div class="gpa-input-grid compact-inputs">
-              <label class="field compact"
-                ><span>현재 성적</span
-                ><input
-                  id="currentGpa"
-                  type="number"
-                  min="0"
-                  max="4.5"
-                  step="0.01"
-                  value="3.48" /></label
-              ><label class="field compact"
-                ><span>목표 성적</span
-                ><input
-                  id="targetGpa"
-                  type="number"
-                  min="0"
-                  max="4.5"
-                  step="0.01"
-                  value="4.00"
-              /></label>
-            </div>
-            <span id="gpaPercent" class="sr-only">87%</span>
           </article>
 
           <article class="panel today-panel">
@@ -161,5 +139,6 @@
       </section>
     </main>
     <script src="./app.js"></script>
+    <script src="./enhancements.js"></script>
   </body>
 </html>

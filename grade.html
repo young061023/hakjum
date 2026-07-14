@@ -39,6 +39,31 @@
           <h2>목표 성적에 필요한 점수를 빠르게 계산해요.</h2>
           <p>기본 정보 → 반영 비율 → 현재 점수 순서로 입력하세요.</p>
         </section>
+        <section class="panel previous-grade-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="section-label">학점 기록</span>
+              <h2>이전 학기 성적</h2>
+              <p>학기별 학점과 이수학점을 저장하면 누적 평균을 계산합니다.</p>
+            </div>
+          </div>
+          <div class="grade-profile-grid">
+            <label class="field"><span>현재 학점</span><input id="currentGpa" type="number" min="0" max="4.5" step="0.01" value="3.48" /></label>
+            <label class="field"><span>목표 학점</span><input id="targetGpa" type="number" min="0" max="4.5" step="0.01" value="4.00" /></label>
+          </div>
+          <form id="previousGradeForm" class="previous-grade-form">
+            <label class="field"><span>학기</span><input id="previousGradeTerm" type="text" placeholder="예: 2025년 2학기" required /></label>
+            <label class="field"><span>학점</span><input id="previousGradeGpa" type="number" min="0" max="4.5" step="0.01" required /></label>
+            <label class="field"><span>이수학점</span><input id="previousGradeCredits" type="number" min="1" max="30" step="1" required /></label>
+            <button class="primary inline-primary" type="submit">이전 학기 추가</button>
+          </form>
+          <div class="previous-grade-summary">
+            <div><span>등록 학기</span><strong id="previousGradeCount">0개</strong></div>
+            <div><span>총 이수학점</span><strong id="previousGradeCreditTotal">0학점</strong></div>
+            <div><span>가중 누적평균</span><strong id="previousGradeAverage">-</strong></div>
+          </div>
+          <div id="previousGradeList" class="previous-grade-list empty">등록된 이전 학기 성적이 없습니다.</div>
+        </section>
         <form id="gradeProjectionForm" class="grade-form grade-step-layout">
           <section class="panel form-panel grade-step">
             <div class="step-number">1</div>

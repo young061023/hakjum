@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
     <link rel="stylesheet" href="./styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
+    <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$","$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
     <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   </head>
   <body>
@@ -58,6 +58,7 @@
         </section>
 
         <section id="collapsedDateBar" class="panel selected-date-bar" hidden>
+          <div id="compactDateCarousel" class="compact-date-carousel" aria-label="접힌 캘린더 날짜 선택"></div>
           <div class="collapsed-date-head"><span>선택 날짜</span><strong id="selectedDateLabel">오늘</strong><b id="selectedDateCount">일정 0개</b></div>
           <p class="collapsed-date-help">위 날짜 선택란에서 이전·다음 날짜로 이동할 수 있습니다.</p>
           <div id="selectedDateInline" class="selected-date-inline">
@@ -68,7 +69,8 @@
         <section class="calendar-main-grid">
           <article id="calendarPanel" class="panel form-panel calendar-panel">
             <div class="calendar-legend">
-              <span class="legend-exam">시험·시험기간</span
+              <span class="legend-exam">시험일</span
+              ><span class="legend-exam-period">시험기간</span
               ><span class="legend-study">공부 일정</span
               ><span class="legend-task">과제</span>
             </div>
@@ -95,8 +97,9 @@
             </section>
             <section class="panel flow-panel">
               <span class="section-label">이번 달 분석</span>
+              <small class="completion-rule">완료 현황 = 이번 달에 시작하는 일정 중 체크한 일정 수</small>
               <div class="analysis-list">
-                <div><span>완료율</span><strong id="doneRate">0%</strong></div>
+                <div><span>완료 현황</span><strong id="doneRate">0/0</strong></div>
                 <div>
                   <span>집중 필요 과목</span
                   ><strong id="riskCourse">없음</strong>
@@ -118,7 +121,7 @@
               <p id="taskSummary">등록된 일정이 없습니다.</p>
             </div>
             <button id="clearDoneTasks" class="secondary" type="button">
-              완료 일정 정리
+              완료 일정 영구 삭제
             </button>
           </div>
           <div id="taskList" class="task-list empty">
@@ -146,7 +149,7 @@
               ><span>과목</span><input id="taskCourse" type="text"
             /></label>
           </div>
-          <div class="grid two">
+          <div>
             <label class="field"
               ><span>일정 종류</span
               ><select id="taskType">
@@ -154,17 +157,9 @@
                 <option>시험</option>
                 <option>시험기간</option>
                 <option>공부</option>
-              </select></label
-            ><label class="field"
-              ><span>진행률</span
-              ><input
-                id="taskProgress"
-                type="number"
-                min="0"
-                max="100"
-                value="0"
-            /></label>
+              </select></label>
           </div>
+          <small class="task-progress-guide">일정을 끝낸 뒤 메인 화면이나 캘린더 목록에서 체크하면 완료로 기록됩니다.</small>
           <div class="grid two">
             <label class="field"
               ><span>시작일</span
@@ -184,5 +179,6 @@
       </div>
     </main>
     <script src="./app.js"></script>
+    <script src="./enhancements.js"></script>
   </body>
 </html>

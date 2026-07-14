@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
     <link rel="stylesheet" href="./styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
+    <script>window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$","$"],["\\[","\\]"]]},svg:{fontCache:"global"}};</script>
     <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
   </head>
   <body>
@@ -214,18 +214,19 @@
             <span class="section-label">공부 타이머</span>
             <h2>집중 시간</h2>
             <p class="timer-course-hint">현재 선택한 과목을 공부하는 동안 사용하세요.</p>
-            <div class="timer" id="timerDisplay">00:00:00</div>
+            <label class="field enhanced-timer-course"><span>공부할 과목</span><select id="enhancedTimerCourse" aria-label="타이머 과목 선택"></select></label>
+            <div class="timer" id="enhancedTimerDisplay">00:00:00</div>
             <div class="button-row">
               <button
-                id="startTimer"
+                id="enhancedStartTimer"
                 class="primary inline-primary"
                 type="button"
               >
                 시작</button
-              ><button id="stopTimer" class="secondary" type="button">
+              ><button id="enhancedPauseTimer" class="secondary" type="button">
                 중단</button>
             </div>
-            <p id="studyTotal">오늘 누적 공부 시간 0분</p>
+            <p id="enhancedStudyTotal">오늘 누적 공부 시간 0분</p>
           </aside>
         </section>
       </section>
@@ -287,5 +288,6 @@
       </div>
     </main>
     <script src="./app.js"></script>
+    <script src="./enhancements.js"></script>
   </body>
 </html>
