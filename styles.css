@@ -9,8 +9,8 @@
   --muted: #9c8e91;
   --brand: #cf5368;
   --brand-dark: #a9364c;
-  --good: #168a52;
-  --bad: #c93c3c;
+  --good: #b83d55;
+  --bad: #8f243b;
   --shadow: 0 18px 48px rgba(91, 49, 55, 0.08);
 }
 
@@ -139,9 +139,9 @@ h2 {
 }
 
 .badge.ok {
-  border-color: rgba(22, 138, 82, 0.26);
-  color: var(--good);
-  background: #eef8f3;
+  border-color: rgba(207, 83, 104, 0.28);
+  color: var(--brand-dark);
+  background: #fff0f3;
 }
 
 .badge.error {
@@ -1263,7 +1263,7 @@ button.auto-plan-item:hover {
 }
 
 .grade-chart .target-line {
-  stroke: #16a34a;
+  stroke: #a9364c;
   stroke-width: 1.5;
   stroke-dasharray: 6 6;
 }
@@ -1413,5 +1413,373 @@ button.auto-plan-item:hover {
 
   .answer-block:last-child {
     border-bottom: 0;
+  }
+}
+
+/* Refined rose visual system */
+body {
+  background:
+    radial-gradient(circle at 12% 0%, rgba(207, 83, 104, 0.08), transparent 28%),
+    radial-gradient(circle at 92% 14%, rgba(169, 54, 76, 0.06), transparent 24%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+.shell {
+  position: relative;
+}
+
+.app-header {
+  padding: 22px 24px;
+  border: 1px solid rgba(239, 228, 225, 0.9);
+  border-radius: 20px;
+  background: rgba(255, 253, 252, 0.86);
+  box-shadow: 0 14px 35px rgba(91, 49, 55, 0.06);
+  backdrop-filter: blur(16px);
+}
+
+.app-header h1 {
+  color: var(--text);
+  letter-spacing: -0.045em;
+}
+
+.app-header .eyebrow {
+  color: var(--brand);
+  letter-spacing: 0.12em;
+}
+
+.header-score {
+  border-color: rgba(207, 83, 104, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fffafa, #fff0f3);
+  box-shadow: 0 12px 28px rgba(169, 54, 76, 0.1);
+}
+
+.header-score strong {
+  color: var(--brand-dark);
+}
+
+.tabbar {
+  gap: 6px;
+  padding: 7px;
+  border-color: rgba(239, 228, 225, 0.92);
+  border-radius: 16px;
+  background: rgba(255, 250, 249, 0.88);
+  box-shadow: 0 10px 28px rgba(91, 49, 55, 0.06);
+  backdrop-filter: blur(18px);
+}
+
+.tab {
+  min-height: 46px;
+  border-radius: 11px;
+  font-size: 14px;
+  font-weight: 800;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.tab:hover {
+  color: var(--brand-dark);
+  background: #fff2f4;
+  transform: translateY(-1px);
+}
+
+.tab.active {
+  border-color: rgba(207, 83, 104, 0.2);
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+  box-shadow: 0 8px 18px rgba(169, 54, 76, 0.2);
+}
+
+.panel {
+  border-color: rgba(239, 228, 225, 0.96);
+  border-radius: 18px;
+  background: rgba(255, 253, 252, 0.94);
+  box-shadow: 0 18px 46px rgba(91, 49, 55, 0.075);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.panel:hover {
+  border-color: rgba(207, 83, 104, 0.2);
+  box-shadow: 0 22px 54px rgba(91, 49, 55, 0.1);
+}
+
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 92% 5%, rgba(207, 83, 104, 0.12), transparent 34%),
+    linear-gradient(145deg, #fffdfc, #fff8f7);
+}
+
+.hero-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(to bottom, var(--brand-dark), var(--brand), #f1a2b0);
+}
+
+.stat-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(150deg, #fffdfc 48%, #fff4f5 100%);
+}
+
+.stat-card::after {
+  content: "";
+  position: absolute;
+  right: -24px;
+  bottom: -30px;
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  background: rgba(207, 83, 104, 0.07);
+}
+
+.stat-card strong,
+.score-block strong {
+  color: var(--brand-dark);
+  letter-spacing: -0.04em;
+}
+
+.score-block,
+.plan-preview,
+.settings,
+.analysis-list div,
+.grade-summary-grid div {
+  border-color: var(--line);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fffdfc, #fff8f7);
+}
+
+.progress-ring {
+  border-color: #f2e3e2;
+  border-top-color: var(--brand);
+  border-right-color: var(--brand-dark);
+  box-shadow: inset 0 0 0 6px #fffdfc, 0 12px 28px rgba(169, 54, 76, 0.1);
+}
+
+.meter,
+.mini-meter {
+  background: #f2e3e2;
+}
+
+.meter span,
+.mini-meter span {
+  background: linear-gradient(90deg, var(--brand-dark), var(--brand));
+}
+
+input,
+select,
+textarea {
+  border-color: var(--line-dark);
+  border-radius: 12px;
+  background: rgba(255, 253, 252, 0.94);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: rgba(207, 83, 104, 0.42);
+  background: #fff;
+}
+
+button {
+  border-radius: 12px;
+  transition: transform 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+button:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.primary {
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+  box-shadow: 0 10px 22px rgba(169, 54, 76, 0.2);
+}
+
+.primary:hover {
+  background: linear-gradient(135deg, #8e283f, #c94660);
+  box-shadow: 0 13px 26px rgba(169, 54, 76, 0.26);
+  transform: translateY(-1px);
+}
+
+.secondary {
+  border-color: var(--line-dark);
+  background: #fff9f8;
+}
+
+.secondary:hover {
+  border-color: rgba(207, 83, 104, 0.32);
+  color: var(--brand-dark);
+  background: #fff0f3;
+}
+
+.badge {
+  border-radius: 999px;
+}
+
+.course-tab {
+  border-radius: 999px;
+}
+
+.course-tab.active {
+  border-color: var(--brand-dark);
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+  box-shadow: 0 7px 16px rgba(169, 54, 76, 0.18);
+}
+
+.auto-plan-item,
+.goal-item,
+.task-item,
+.material-item,
+.question-card,
+.history-card,
+.wrong-note-item {
+  border-radius: 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.auto-plan-item:hover,
+.task-item:hover,
+.material-item:hover {
+  border-color: rgba(207, 83, 104, 0.28);
+  box-shadow: 0 11px 24px rgba(91, 49, 55, 0.08);
+  transform: translateY(-1px);
+}
+
+/* Calendar: same rose family, with the primary item receiving the strongest emphasis. */
+.calendar-week {
+  margin-bottom: 10px;
+  padding: 0 5px;
+  color: var(--brand-dark);
+  letter-spacing: 0.04em;
+}
+
+.calendar-grid {
+  gap: 5px;
+}
+
+.calendar-day {
+  min-height: 104px;
+  padding: 10px;
+  border-color: var(--line);
+  border-radius: 12px;
+  background: rgba(255, 253, 252, 0.96);
+  box-shadow: 0 5px 14px rgba(91, 49, 55, 0.035);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.calendar-day:hover {
+  z-index: 1;
+  border-color: rgba(207, 83, 104, 0.34);
+  box-shadow: 0 11px 24px rgba(91, 49, 55, 0.09);
+  transform: translateY(-2px);
+}
+
+.calendar-day:has(.dot) {
+  border-top: 3px solid rgba(207, 83, 104, 0.52);
+  padding-top: 8px;
+}
+
+.calendar-day.muted {
+  color: #baaeb0;
+  background: #faf4f2;
+  box-shadow: none;
+}
+
+.calendar-day > strong {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  margin-bottom: 7px;
+  border-radius: 9px;
+  font-size: 13px;
+}
+
+.calendar-day:has(.dot) > strong {
+  color: var(--brand-dark);
+  background: #fff0f3;
+}
+
+.dot-list {
+  gap: 5px;
+}
+
+.dot {
+  position: relative;
+  padding: 5px 7px 5px 18px;
+  border: 1px solid #f0dadd;
+  border-radius: 7px;
+  color: #9a5663;
+  background: #fff1f3;
+  font-size: 11px;
+}
+
+.dot::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--brand);
+  transform: translateY(-50%);
+}
+
+.dot:first-child {
+  border-color: var(--brand-dark);
+  color: #fff;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand));
+  box-shadow: 0 6px 14px rgba(169, 54, 76, 0.22);
+  font-weight: 900;
+}
+
+.dot:first-child::before {
+  background: #ffdce2;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.16);
+}
+
+.analysis-list strong,
+.grade-summary-grid strong,
+.grade-result-title strong,
+.grade-breakdown strong {
+  color: var(--brand-dark);
+}
+
+.grade-chart {
+  border-radius: 14px;
+  background: linear-gradient(145deg, #fffdfc, #fff8f7);
+}
+
+@media (max-width: 860px) {
+  .app-header {
+    padding: 18px;
+  }
+
+  .calendar-grid {
+    gap: 3px;
+  }
+
+  .calendar-day {
+    min-height: 82px;
+    padding: 7px;
+    border-radius: 9px;
+  }
+
+  .calendar-day > strong {
+    width: 23px;
+    height: 23px;
+  }
+
+  .dot {
+    padding: 4px 5px 4px 14px;
+  }
+
+  .dot::before {
+    left: 5px;
   }
 }
