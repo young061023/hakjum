@@ -923,6 +923,53 @@ button.auto-plan-item:hover {
   padding: 0 18px;
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(44, 35, 37, 0.35);
+}
+
+.modal-backdrop[hidden] {
+  display: none;
+}
+
+.modal-panel {
+  width: min(460px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 22px 70px rgba(44, 35, 37, 0.2);
+  padding: 24px;
+}
+
+.modal-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.modal-heading h2 {
+  margin-bottom: 0;
+}
+
+.icon-button {
+  width: 40px;
+  min-height: 40px;
+  border: 1px solid var(--line-dark);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--subtle);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .course-tabs {
   display: flex;
   gap: 8px;

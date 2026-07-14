@@ -2307,13 +2307,47 @@ $("#signInButton")?.addEventListener("click", async () => {
   await savePlannerStateToSupabase();
 });
 
+function openSignUpModal() {
+  const modal = $("#signUpModal");
+  if (!modal) return;
+  $("#signUpEmail").value = $("#authEmail")?.value.trim() || "";
+  $("#signUpPassword").value = "";
+  $("#signUpPasswordConfirm").value = "";
+  modal.hidden = false;
+  $("#signUpEmail")?.focus();
+}
+
+function closeSignUpModal() {
+  const modal = $("#signUpModal");
+  if (modal) modal.hidden = true;
+}
+
+$("#openSignUpModal")?.addEventListener("click", openSignUpModal);
+$("#closeSignUpModal")?.addEventListener("click", closeSignUpModal);
+$("#cancelSignUpModal")?.addEventListener("click", closeSignUpModal);
+$("#signUpModal")?.addEventListener("click", (event) => {
+  if (event.target.id === "signUpModal") closeSignUpModal();
+});
+
 $("#signUpButton")?.addEventListener("click", async () => {
   await initSupabase();
   if (!supabaseClient) return updateAuthUi();
   const authStatus = $("#authStatus");
+  const email = $("#signUpEmail")?.value.trim() || $("#authEmail")?.value.trim() || "";
+  const password = $("#signUpPassword")?.value || $("#authPassword")?.value || "";
+  const confirmPassword = $("#signUpPasswordConfirm")?.value || password;
+
+  if (password !== confirmPassword) {
+    if (authStatus) {
+      authStatus.textContent = "가입 실패: 비밀번호 확인이 일치하지 않습니다.";
+      authStatus.className = "status error";
+    }
+    return;
+  }
+
   const { error } = await supabaseClient.auth.signUp({
-    email: $("#authEmail").value.trim(),
-    password: $("#authPassword").value
+    email,
+    password
   });
   if (error) {
     if (authStatus) {
@@ -2326,6 +2360,7 @@ $("#signUpButton")?.addEventListener("click", async () => {
     authStatus.textContent = "가입 요청을 보냈습니다. 이메일 확인 설정이 켜져 있으면 메일을 확인하세요.";
     authStatus.className = "status ok";
   }
+  closeSignUpModal();
 });
 
 $("#signOutButton")?.addEventListener("click", async () => {
