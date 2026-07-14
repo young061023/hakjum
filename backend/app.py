@@ -392,7 +392,7 @@ def generate_questions_for_uploaded_pdf(
     pdf_path,
     question_type="객관식",
     count=5,
-    max_tokens=500,
+    max_tokens=260,
 ):
     text = extract_pdf_text(pdf_path)
     chunks = split_chunks(text)
@@ -412,7 +412,7 @@ def generate_questions_from_chunks(
     sources=None,
     question_type="객관식",
     count=5,
-    max_tokens=500,
+    max_tokens=260,
 ):
     if not chunks:
         return [], []
@@ -422,9 +422,10 @@ def generate_questions_from_chunks(
     seen_questions = set()
     draft_results = []
     attempts = 0
-    max_attempts = max(count * 10, 20)
+    target_count = max(1, min(int(count or 1), 3))
+    max_attempts = min(len(chunks), target_count)
 
-    while len(good_results) < count and attempts < max_attempts:
+    while len(good_results) + len(draft_results) < target_count and attempts < max_attempts:
         source_index = attempts % len(chunks)
         chunk = chunks[source_index]
         source = sources[source_index] if source_index < len(sources) else {"chunk_index": source_index}
@@ -434,7 +435,7 @@ def generate_questions_from_chunks(
             question_type=question_type,
             max_tokens=max_tokens,
             adapter_path=ADAPTER_PATH,
-            retries=3,
+            retries=1,
         )
 
         item = {

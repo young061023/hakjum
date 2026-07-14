@@ -191,7 +191,8 @@ def run_mlx_model(prompt, max_tokens, adapter_path=None):
     if adapter_path:
         cmd.extend(["--adapter-path", adapter_path])
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    timeout = int(os.getenv("MODEL_TIMEOUT_SECONDS", "55"))
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     text = result.stdout
 
     if "==========" in text:

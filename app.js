@@ -102,6 +102,7 @@ function loadPlannerState() {
     streak: 14,
     studySeconds: 0,
     studyDate: todayText(),
+    hiddenAutoTaskIds: [],
     activeCourseId: "course-default",
     courses: [
       {
@@ -143,6 +144,7 @@ function loadPlannerState() {
     const today = todayText();
     if (loaded.studyDate && loaded.studyDate !== today) loaded.studySeconds = 0;
     loaded.studyDate = today;
+    if (!Array.isArray(loaded.hiddenAutoTaskIds)) loaded.hiddenAutoTaskIds = [];
     return loaded;
   } catch {
     return fallback;
@@ -449,11 +451,16 @@ function ensureAutoStudyPlan() {
       .filter((task) => task.autoPlan && task.done)
       .map((task) => task.id)
   );
+  if (!Array.isArray(state.hiddenAutoTaskIds)) state.hiddenAutoTaskIds = [];
+  const hiddenAutoTaskIds = new Set(state.hiddenAutoTaskIds);
   const manualTasks = state.tasks.filter((task) => !task.autoPlan);
-  const autoTasks = state.courses.flatMap(buildAutoTasksForCourse).map((task) => ({
-    ...task,
-    done: manualDoneIds.has(task.id)
-  }));
+  const autoTasks = state.courses
+    .flatMap(buildAutoTasksForCourse)
+    .filter((task) => !hiddenAutoTaskIds.has(task.id))
+    .map((task) => ({
+      ...task,
+      done: manualDoneIds.has(task.id)
+    }));
   state.tasks = [...manualTasks, ...autoTasks].sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -2170,16 +2177,28 @@ $("#calendarGrid")?.addEventListener("click", (event) => {
 $("#taskList")?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
-  const task = state.tasks.find((item) => item.id === button.dataset.id);
+  const taskId = button.dataset.id;
+  const task = state.tasks.find((item) => item.id === taskId);
+
+  if (button.dataset.action === "delete") {
+    if (task?.autoPlan) {
+      if (!Array.isArray(state.hiddenAutoTaskIds)) state.hiddenAutoTaskIds = [];
+      if (!state.hiddenAutoTaskIds.includes(taskId)) state.hiddenAutoTaskIds.push(taskId);
+    }
+    state.tasks = state.tasks.filter((item) => item.id !== taskId);
+    savePlannerState();
+    renderAll();
+    return;
+  }
+
   if (!task) return;
 
   if (button.dataset.action === "toggle") {
-    task.done = !task.done;
-    task.progress = task.done ? 100 : Math.min(task.progress, 90);
-  }
-
-  if (button.dataset.action === "delete") {
-    state.tasks = state.tasks.filter((item) => item.id !== button.dataset.id);
+    if (task.autoPlan) {
+      if (!Array.isArray(state.hiddenAutoTaskIds)) state.hiddenAutoTaskIds = [];
+      if (!state.hiddenAutoTaskIds.includes(taskId)) state.hiddenAutoTaskIds.push(taskId);
+    }
+    state.tasks = state.tasks.filter((item) => item.id !== taskId);
   }
 
   savePlannerState();
