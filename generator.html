@@ -1,7 +1,141 @@
-<!doctype html><html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>문제 생성 - 학점수호자</title><link rel="stylesheet" href="./styles.css"/><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body><main class="shell app-shell">
-<header class="app-header"><div><p class="eyebrow">AI QUESTION LAB</p><h1>문제 생성</h1><p>교안을 올리고 원하는 유형의 연습 문제를 만드세요.</p></div><div class="header-score"><span>현재 GPA</span><strong id="headerGpa">3.48</strong></div></header>
-<nav class="tabbar" aria-label="주요 화면"><a class="tab" href="./index.html">홈</a><a class="tab" href="./study.html">과제/공부</a><a class="tab" href="./calendar.html">캘린더</a><a class="tab" href="./grade.html">성적 역산</a><a class="tab active" href="./generator.html">문제 생성</a><a class="tab" href="./auth.html">로그인</a></nav>
-<section id="generatorView" class="page-section generator-page"><section class="generator-hero"><span class="section-label">AI 학습 도구</span><h2>교안에서 시험에 나올 만한 문제를 만들어 보세요.</h2><p>문제 유형과 난이도를 선택하면 답안과 채점 기준까지 함께 생성합니다.</p></section>
-<form id="generatorForm" class="panel form-panel generator-form"><div class="panel-heading"><div><h2>문제 설정</h2><p>PDF 또는 PPT 교안을 선택하세요.</p></div><span id="connectionBadge" class="badge muted">준비</span></div><label class="file-drop field"><span>교안 파일</span><input id="materialFile" type="file" accept=".pdf,.ppt,.pptx" required/><small>파일을 선택하면 바로 문제 생성에 사용할 수 있어요.</small></label><div class="grid three equal"><label class="field"><span>문제 유형</span><select id="questionType"><option value="short_answer">주관식</option><option value="multiple_choice">객관식</option><option value="mixed">혼합형</option></select></label><label class="field"><span>문제 수</span><input id="questionCount" type="number" min="1" max="20" value="3"/></label><label class="field"><span>난이도</span><select id="difficulty"><option value="easy">쉬움</option><option value="medium" selected>보통</option><option value="hard">어려움</option></select></label></div><label class="field"><span>과목명</span><input id="courseName" type="text" placeholder="예: 암호학"/></label><label class="field"><span>추가 요청사항</span><textarea id="instruction" rows="4" placeholder="예: 2장 핵심 개념 위주로 출제"></textarea></label><button id="submitButton" class="primary" type="submit">AI 문제 생성하기</button><p id="statusText" class="status">교안 파일을 선택하고 문제를 생성하세요.</p></form>
-<section class="panel result-panel"><div class="panel-heading"><div><span class="section-label">생성 결과</span><h2>연습 문제</h2><p id="resultMeta">아직 생성된 문제가 없습니다.</p></div><button id="copyJson" class="secondary" type="button">결과 복사</button></div><div id="results" class="results empty">생성된 문제와 모범답안이 여기에 표시됩니다.</div></section>
-<section class="panel history-panel"><div class="panel-heading"><div><span class="section-label">나의 학습 기록</span><h2>이전에 만든 문제</h2><p>로그인한 계정에 저장된 문제를 다시 확인할 수 있어요.</p></div><button id="loadHistory" class="secondary" type="button">내 기록 불러오기</button></div><div id="history" class="history empty">저장된 문제 기록이 없습니다.</div></section></section></main><script src="./app.js"></script></body></html>
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>문제 생성 - 학점수호자</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <main class="shell app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">AI QUESTION LAB</p>
+          <h1>문제 생성</h1>
+          <p>교안을 올리고 원하는 유형의 연습 문제를 만드세요.</p>
+        </div>
+        <label class="header-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="무엇을 도와드릴까요?" aria-label="검색" /><kbd>⌘K</kbd></label>
+        <a class="header-coach" href="./study.html"><span aria-hidden="true">✦</span> AI 학점 코치</a>
+        <a class="header-notification" href="./calendar.html" aria-label="일정 알림"><span aria-hidden="true">♧</span><i></i></a>
+        <div class="header-score">
+          <span>현재 성적</span><strong id="headerGpa">3.48</strong>
+        </div>
+      </header>
+      <nav class="tabbar" aria-label="주요 화면">
+        <a class="tab" href="./index.html">홈</a
+        ><a class="tab" href="./study.html">과제/공부</a
+        ><a class="tab" href="./calendar.html">캘린더</a
+        ><a class="tab" href="./grade.html">성적 역산</a
+        ><a class="tab active" href="./generator.html">문제 생성</a
+        ><a class="tab" href="./auth.html">로그인</a>
+      </nav>
+      <section id="generatorView" class="page-section generator-page">
+        <section class="generator-hero">
+          <span class="section-label">AI 학습 도구</span>
+          <h2>교안에서 시험에 나올 만한 문제를 만들어 보세요.</h2>
+          <p>
+            문제 유형과 난이도를 선택하면 답안과 채점 기준까지 함께 생성합니다.
+          </p>
+        </section>
+        <form id="generatorForm" class="panel form-panel generator-form">
+          <div class="panel-heading">
+            <div>
+              <h2>문제 설정</h2>
+              <p>PDF 또는 PPT 교안을 선택하세요.</p>
+            </div>
+            <span id="connectionBadge" class="badge muted">준비</span>
+          </div>
+          <label class="file-drop field"
+            ><span>교안 파일</span
+            ><input
+              id="materialFile"
+              type="file"
+              accept=".pdf,.ppt,.pptx"
+            /><small
+              >파일을 선택하면 바로 문제 생성에 사용할 수 있어요.</small
+            ></label
+          >
+          <div class="grid three equal">
+            <label class="field"
+              ><span>문제 유형</span
+              ><select id="questionType">
+                <option value="short_answer">주관식</option>
+                <option value="multiple_choice">객관식</option>
+                <option value="mixed">혼합형</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>문제 수</span>
+              <input
+                id="questionCount"
+                type="number"
+                min="1"
+                max="20"
+                value="3"
+            /></label>
+            <label class="field">
+              <span>난이도</span>
+              <select id="difficulty">
+                <option value="easy">쉬움</option>
+                <option value="medium" selected>보통</option>
+                <option value="hard">어려움</option>
+              </select></label
+            >
+          </div>
+          <label class="field"
+            ><span>과목명</span
+            ><input
+              id="courseName"
+              type="text"
+              placeholder="예: 암호학" /></label
+          ><label class="field"
+            ><span>추가 요청사항</span
+            ><textarea
+              id="instruction"
+              rows="4"
+              placeholder="예: 2장 핵심 개념 위주로 출제"
+            ></textarea></label
+          ><button id="submitButton" class="primary" type="submit">
+            AI 문제 생성하기
+          </button>
+          <p id="statusText" class="status">
+            교안 파일을 선택하고 문제를 생성하세요.
+          </p>
+        </form>
+        <section class="panel result-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="section-label">생성 결과</span>
+              <h2>연습 문제</h2>
+              <p id="resultMeta">아직 생성된 문제가 없습니다.</p>
+            </div>
+            <button id="copyJson" class="secondary" type="button">
+              결과 복사
+            </button>
+          </div>
+          <div id="results" class="results empty">
+            생성된 문제와 모범답안이 여기에 표시됩니다.
+          </div>
+        </section>
+        <section class="panel history-panel">
+          <div class="panel-heading">
+            <div>
+              <span class="section-label">나의 학습 기록</span>
+              <h2>이전에 만든 문제</h2>
+              <p>로그인한 계정에 저장된 문제를 다시 확인할 수 있어요.</p>
+            </div>
+            <button id="loadHistory" class="secondary" type="button">
+              내 기록 불러오기
+            </button>
+          </div>
+          <div id="history" class="history empty">
+            저장된 문제 기록이 없습니다.
+          </div>
+        </section>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
