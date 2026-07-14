@@ -23,12 +23,27 @@ _TRANSFORMERS_RUNTIME = None
 
 
 def clean_source_text(text):
-    text = text.replace("\u00a0", " ")
+    text = str(text or "").replace("\u00a0", " ")
     text = re.sub(r"ⓒ.*", " ", text)
     text = re.sub(r"Saebyeol.?s PowerPoint", " ", text, flags=re.I)
+    text = re.sub(r"#{1,6}\s*", " ", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"\[[pP]\.?\s*\d+\]", " ", text)
+    text = re.sub(r"\b요약\s*기반\b", " ", text)
+    text = re.sub(r"\b개념\b", " ", text)
+    text = text.replace("*", " ")
+    text = re.sub(r"[·•]\s*", " ", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
+
+def clean_chunk_for_prompt(text):
+    text = clean_source_text(text)
+    text = re.sub(r"(?:일반화 공식|극값 판정고|조임정리|샌드위치 정리)\s*:?", " ", text)
+    text = re.sub(r"\(\s*\)", " ", text)
+    text = re.sub(r"^[\s:;,.\-]+", "", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:900]
 
 def extract_pdf_text(pdf_path):
     if PdfReader is None:
@@ -81,6 +96,7 @@ def split_chunks(text, max_chars=900):
 
 
 def build_prompt(chunk, question_type):
+    chunk = clean_chunk_for_prompt(chunk)
     if question_type == "객관식":
         return f"""
 너는 대학 강의자료 기반 시험문제 출제자다.
@@ -473,6 +489,15 @@ def validate_question(text, question_type):
 
     if len(text) > 1200:
         errors.append("출력 너무 김")
+
+    if re.search(r"#{2,}|\[p\.?\s*\d+\]|요약\s*기반|출처\s*[^\n]*요약", text, flags=re.I):
+        errors.append("교안 제목/출처 조각 포함")
+
+    problem_text = problem_match.group(1).strip() if problem_match else ""
+    if question_type in {"단답형", "서술형"}:
+        intent_words = r"무엇|설명|구하|계산|서술|비교|조건|이유|정의|의미"
+        if len(problem_text.split()) < 6 and not re.search(intent_words, problem_text):
+            errors.append("문제 의도가 불명확함")
 
     if question_type == "객관식":
         if "보기:" not in text:

@@ -1839,14 +1839,20 @@ function parseGeneratedQuestion(item, index) {
 function compactQuestionText(value) {
   return String(value || "")
     .replace(/\r/g, "")
-    .replace(/\[([\s\S]*?)\]/g, (_, expr) => `\(${expr.trim()}\)`)
-    .replace(/\$\$([\s\S]*?)\$\$/g, (_, expr) => `\(${expr.trim()}\)`)
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, expr) => `\\(${expr.trim()}\\)`)
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_, expr) => `\\(${expr.trim()}\\)`)
     .replace(/\n\s*(\\\([^)]*\\\)|\$[^$]+\$)\s*\n/g, " $1 ")
     .replace(/\n+/g, " ")
     .replace(/\s{2,}/g, " ")
     .trim();
 }
 
+function renderQuestionText(value) {
+  const text = compactQuestionText(value)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, expr) => expr.trim())
+    .replace(/\$([^$]+)\$/g, (_, expr) => expr.trim());
+  return escapeHtmlRaw(text);
+}
 function renderQuestions(payload) {
   const questions = normalizeQuestions(payload);
   latestPayload = payload;
@@ -1863,7 +1869,7 @@ function renderQuestions(payload) {
         <article class="question-card">
           <div class="question-head">
             <small>문제 ${index + 1}${parsed.source ? ` · 출처 ${formatSource(parsed.source)}` : ""}</small>
-            <h3>${renderRichText(compactQuestionText(textOrFallback(parsed.question)))}</h3>
+            <h3>${renderQuestionText(textOrFallback(parsed.question))}</h3>
           </div>
           <div id="answerReveal-${index}" class="answer-grid answer-reveal" hidden></div>
           <div class="grading-box">
