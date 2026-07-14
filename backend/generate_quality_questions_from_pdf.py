@@ -16,8 +16,10 @@ except ImportError:
     sp = None
 
 
-MODEL = "Qwen/Qwen3-1.7B-MLX-4bit"
+MLX_MODEL = os.getenv("MLX_MODEL", "Qwen/Qwen3-1.7B-MLX-4bit")
+HF_BASE_MODEL = os.getenv("HF_BASE_MODEL", "Qwen/Qwen3-1.7B")
 BAD_CHARS = ["ど", "几", "來", "�"]
+_TRANSFORMERS_RUNTIME = None
 
 
 def clean_source_text(text):
@@ -158,12 +160,28 @@ def build_prompt(chunk, question_type):
 """.strip()
 
 
+def choose_inference_backend():
+    backend = os.getenv("INFERENCE_BACKEND", "auto").strip().lower()
+    if backend in {"mlx", "transformers"}:
+        return backend
+    if sys.platform == "darwin":
+        return "mlx"
+    return "transformers"
+
+
 def run_model(prompt, max_tokens, adapter_path=None):
+    backend = choose_inference_backend()
+    if backend == "transformers":
+        return run_transformers_model(prompt, max_tokens, adapter_path)
+    return run_mlx_model(prompt, max_tokens, adapter_path)
+
+
+def run_mlx_model(prompt, max_tokens, adapter_path=None):
     mlx_generate = os.getenv("MLX_LM_GENERATE") or str(Path(sys.executable).with_name("mlx_lm.generate"))
     cmd = [
         mlx_generate,
         "--model",
-        MODEL,
+        MLX_MODEL,
         "--prompt",
         prompt,
         "--max-tokens",
@@ -181,6 +199,85 @@ def run_model(prompt, max_tokens, adapter_path=None):
         if len(parts) >= 3:
             text = parts[1]
 
+    return clean_generated_text(text)
+
+
+def is_peft_adapter_path(adapter_path):
+    if not adapter_path:
+        return False
+
+    path = Path(adapter_path)
+    if not path.exists():
+        return False
+
+    config_path = path / "adapter_config.json"
+    if not config_path.exists():
+        return False
+
+    config_text = config_path.read_text(encoding="utf-8", errors="ignore")
+    return "peft_type" in config_text or "base_model_name_or_path" in config_text
+
+
+def load_transformers_runtime(adapter_path=None):
+    global _TRANSFORMERS_RUNTIME
+    if _TRANSFORMERS_RUNTIME is not None:
+        return _TRANSFORMERS_RUNTIME
+
+    import torch
+    from transformers import AutoModelForCausalLM, AutoTokenizer
+
+    tokenizer = AutoTokenizer.from_pretrained(HF_BASE_MODEL, trust_remote_code=True)
+    model = AutoModelForCausalLM.from_pretrained(
+        HF_BASE_MODEL,
+        torch_dtype="auto",
+        low_cpu_mem_usage=True,
+        trust_remote_code=True,
+    )
+
+    peft_adapter = os.getenv("HF_ADAPTER_ID")
+    if not peft_adapter and is_peft_adapter_path(adapter_path):
+        peft_adapter = adapter_path
+
+    if peft_adapter:
+        from peft import PeftModel
+
+        model = PeftModel.from_pretrained(model, peft_adapter)
+
+    model.eval()
+    _TRANSFORMERS_RUNTIME = tokenizer, model
+    return _TRANSFORMERS_RUNTIME
+
+
+def run_transformers_model(prompt, max_tokens, adapter_path=None):
+    import torch
+
+    tokenizer, model = load_transformers_runtime(adapter_path)
+    if getattr(tokenizer, "chat_template", None):
+        prompt_text = tokenizer.apply_chat_template(
+            [{"role": "user", "content": prompt}],
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    else:
+        prompt_text = prompt
+
+    inputs = tokenizer(prompt_text, return_tensors="pt")
+    model_device = next(model.parameters()).device
+    inputs = {key: value.to(model_device) for key, value in inputs.items()}
+
+    with torch.inference_mode():
+        output_ids = model.generate(
+            **inputs,
+            max_new_tokens=max_tokens,
+            do_sample=True,
+            temperature=float(os.getenv("GENERATION_TEMPERATURE", "0.3")),
+            top_p=float(os.getenv("GENERATION_TOP_P", "0.9")),
+            repetition_penalty=float(os.getenv("GENERATION_REPETITION_PENALTY", "1.05")),
+            pad_token_id=tokenizer.eos_token_id,
+        )
+
+    generated_ids = output_ids[0][inputs["input_ids"].shape[-1]:]
+    text = tokenizer.decode(generated_ids, skip_special_tokens=True)
     return clean_generated_text(text)
 
 
