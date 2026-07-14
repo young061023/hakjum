@@ -841,6 +841,31 @@ async function vectorizeMaterialText(course, material) {
       method: "POST",
       body: form
     });
+    try {
+      const data = await readJsonResponse(response, "PDF 페이지 기반 Chroma 저장");
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || "PDF 페이지 기반 Chroma 저장에 실패했습니다.");
+      }
+
+      material.vectorized = true;
+      material.vectorizedSource = "pdf_pages";
+      material.vectorizedAt = new Date().toISOString();
+      material.chunkCount = data.chunk_count || 0;
+      return data;
+    } catch (error) {
+      console.warn(error);
+      response = await fetch("/vectorize-text", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          course_id: course.id,
+          course_name: course.name,
+          material_id: material.id,
+          title,
+          text: material.summary
+        })
+      });
+    }
   } else {
     response = await fetch("/vectorize-text", {
       method: "POST",
@@ -861,7 +886,7 @@ async function vectorizeMaterialText(course, material) {
   }
 
   material.vectorized = true;
-  material.vectorizedSource = isPdf ? "pdf_pages" : "summary";
+  material.vectorizedSource = "summary";
   material.vectorizedAt = new Date().toISOString();
   material.chunkCount = data.chunk_count || 0;
   return data;
