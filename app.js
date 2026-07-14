@@ -767,6 +767,7 @@ function renderCourses() {
   if (activeMaterial?.summary) {
     courseSummary.className = "summary-box";
     courseSummary.innerHTML = renderMarkdown(activeMaterial.summary);
+    typesetMath(courseSummary);
   } else {
     courseSummary.className = "summary-box empty";
     courseSummary.textContent = activeMaterial
@@ -1176,10 +1177,16 @@ async function requestGradeProjection(payload) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload)
   });
-  const data = await response.json();
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(text.trim().slice(0, 180) || `서버 응답이 비어 있습니다. (${response.status})`);
+  }
   if (!response.ok || !data.ok) {
     const message = Array.isArray(data.error) ? data.error.map((item) => item.msg).join(", ") : data.error;
-    throw new Error(message || "성적 계산에 실패했습니다.");
+    throw new Error(message || `성적 계산에 실패했습니다. (${response.status})`);
   }
   return data.result;
 }
@@ -1848,6 +1855,7 @@ function renderQuestions(payload) {
     .join("");
 
   resultMeta.textContent = `생성 완료: ${questions.length}개`;
+  typesetMath(results);
 }
 
 function renderHistory(rows) {
@@ -1906,6 +1914,7 @@ function renderGradingResult(index, grading) {
       }
     </div>
   `;
+  typesetMath(box);
 }
 
 function escapeHtml(value) {
@@ -1928,7 +1937,7 @@ function escapeHtmlRaw(value) {
 }
 
 function renderRichText(value) {
-  return renderInlineMath(escapeHtmlRaw(value)).replaceAll("\n", "<br />");
+  return escapeHtmlRaw(value).replaceAll("\n", "<br />");
 }
 
 function renderInlineMath(html) {
@@ -1957,11 +1966,7 @@ function stripMathBrackets(value) {
 function renderInlineMarkdown(value) {
   return escapeHtmlRaw(value)
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>")
-    .replace(
-      /((?:^|>)(?:(?!<code>).)*?)(?=<code>|$)/g,
-      (match) => renderInlineMath(match)
-    );
+    .replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 
 function renderMarkdown(markdown) {
@@ -2020,6 +2025,12 @@ function renderMarkdown(markdown) {
 
   closeList();
   return html.join("");
+}
+
+function typesetMath(target = document.body) {
+  if (window.MathJax?.typesetPromise) {
+    window.MathJax.typesetPromise([target]).catch(() => {});
+  }
 }
 
 function formatDate(value) {
