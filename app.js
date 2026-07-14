@@ -846,16 +846,16 @@ function renderWrongNotes() {
             <small>${new Date(note.createdAt).toLocaleString("ko-KR")}</small>
             <strong>${escapeHtml(note.score ?? "-")}점 · ${escapeHtml(note.grade || "채점")}</strong>
           </div>
-          <h3>${escapeHtml(note.question)}</h3>
-          <p><b>부족 키워드</b> ${escapeHtml(note.missingKeywords?.join(", ") || "-")}</p>
-          <p><b>피드백</b> ${escapeHtml(note.feedback || "-")}</p>
+          <h3>${renderRichText(note.question)}</h3>
+          <p><b>부족 키워드</b> ${renderRichText(note.missingKeywords?.join(", ") || "-")}</p>
+          <p><b>피드백</b> ${renderRichText(note.feedback || "-")}</p>
           <div class="related-chunks">
             ${
               related.length
                 ? related
                     .map((chunk) => {
                       const source = formatMaterialReference(chunk);
-                      return `<div><span>${escapeHtml(source)}</span><p>${escapeHtml(String(chunk.text || "").slice(0, 220))}</p></div>`;
+                      return `<div><span>${escapeHtml(source)}</span><p>${renderRichText(String(chunk.text || "").slice(0, 220))}</p></div>`;
                     })
                     .join("")
                 : `<div><span>관련 교안 없음</span><p>Chroma DB에 벡터화된 교안 chunk가 아직 없거나 검색 결과가 없습니다.</p></div>`
@@ -1633,17 +1633,17 @@ function renderQuestions(payload) {
         <article class="question-card">
           <div class="question-head">
             <small>문제 ${index + 1}${parsed.source ? ` · 출처 ${formatSource(parsed.source)}` : ""}</small>
-            <h3>${escapeHtml(textOrFallback(parsed.question))}</h3>
+            <h3>${renderRichText(textOrFallback(parsed.question))}</h3>
           </div>
           <div class="answer-grid">
             <div class="answer-block">
               <h4>모범답안</h4>
-              <p>${escapeHtml(textOrFallback(answerParts, "응답에 모범답안 필드가 없습니다."))}</p>
+              <p>${renderRichText(textOrFallback(answerParts, "응답에 모범답안 필드가 없습니다."))}</p>
             </div>
             <div class="answer-block">
               <h4>필수 키워드 / 채점 기준</h4>
-              <p>${escapeHtml(textOrFallback(parsed.keywords))}</p>
-              <p>${escapeHtml(textOrFallback(parsed.rubric))}</p>
+              <p>${renderRichText(textOrFallback(parsed.keywords))}</p>
+              <p>${renderRichText(textOrFallback(parsed.rubric))}</p>
             </div>
           </div>
           <div class="grading-box">
@@ -1705,11 +1705,11 @@ function renderGradingResult(index, grading) {
       <span>${escapeHtml(grading.grade || "채점 완료")}</span>
     </div>
     <div class="grading-feedback">
-      ${grading.recognized_answer ? `<p><b>인식된 답안</b><br>${escapeHtml(grading.recognized_answer)}</p>` : ""}
-      <p>${escapeHtml(grading.feedback || "피드백이 없습니다.")}</p>
-      ${strengths.length ? `<p><b>잘한 점</b> ${escapeHtml(strengths.join(", "))}</p>` : ""}
-      ${missing.length ? `<p><b>부족한 키워드</b> ${escapeHtml(missing.join(", "))}</p>` : ""}
-      ${grading.revised_answer ? `<p><b>보완 답안</b><br>${escapeHtml(grading.revised_answer)}</p>` : ""}
+      ${grading.recognized_answer ? `<p><b>인식된 답안</b><br>${renderRichText(grading.recognized_answer)}</p>` : ""}
+      <p>${renderRichText(grading.feedback || "피드백이 없습니다.")}</p>
+      ${strengths.length ? `<p><b>잘한 점</b> ${renderRichText(strengths.join(", "))}</p>` : ""}
+      ${missing.length ? `<p><b>부족한 키워드</b> ${renderRichText(missing.join(", "))}</p>` : ""}
+      ${grading.revised_answer ? `<p><b>보완 답안</b><br>${renderRichText(grading.revised_answer)}</p>` : ""}
     </div>
     <div class="related-chunks">
       ${
@@ -1717,7 +1717,7 @@ function renderGradingResult(index, grading) {
           ? relatedChunks
               .map((chunk) => {
                 const source = formatMaterialReference(chunk);
-                return `<div><span>${escapeHtml(source)}</span><p>${escapeHtml(String(chunk.text || "").slice(0, 220))}</p></div>`;
+                return `<div><span>${escapeHtml(source)}</span><p>${renderRichText(String(chunk.text || "").slice(0, 220))}</p></div>`;
               })
               .join("")
           : `<div><span>관련 교안</span><p>Chroma DB 검색 결과가 없습니다. 교안을 벡터화하면 관련 페이지가 표시됩니다.</p></div>`
@@ -1745,10 +1745,41 @@ function escapeHtmlRaw(value) {
     .replaceAll("'", "&#039;");
 }
 
+function renderRichText(value) {
+  return renderInlineMath(escapeHtmlRaw(value)).replaceAll("\n", "<br />");
+}
+
+function renderInlineMath(html) {
+  return html
+    .replace(
+      /([A-Za-z0-9가-힣.)\]}]+)\^(\([^)]+\)|\{[^}]+\}|-?\d+(?:\.\d+)?|[A-Za-z가-힣]+)/g,
+      (_, base, exponent) => `${base}<sup>${stripMathBrackets(exponent)}</sup>`
+    )
+    .replace(
+      /([A-Za-z0-9가-힣.)\]}]+)_(\([^)]+\)|\{[^}]+\}|-?\d+(?:\.\d+)?|[A-Za-z가-힣]+)/g,
+      (_, base, subscript) => `${base}<sub>${stripMathBrackets(subscript)}</sub>`
+    );
+}
+
+function stripMathBrackets(value) {
+  const text = String(value);
+  if (
+    (text.startsWith("(") && text.endsWith(")")) ||
+    (text.startsWith("{") && text.endsWith("}"))
+  ) {
+    return text.slice(1, -1);
+  }
+  return text;
+}
+
 function renderInlineMarkdown(value) {
   return escapeHtmlRaw(value)
     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(
+      /((?:^|>)(?:(?!<code>).)*?)(?=<code>|$)/g,
+      (match) => renderInlineMath(match)
+    );
 }
 
 function renderMarkdown(markdown) {

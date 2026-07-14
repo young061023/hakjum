@@ -498,6 +498,22 @@ code {
   background: #eef1f5;
 }
 
+sup,
+sub {
+  position: relative;
+  font-size: 0.72em;
+  line-height: 0;
+  vertical-align: baseline;
+}
+
+sup {
+  top: -0.48em;
+}
+
+sub {
+  bottom: -0.2em;
+}
+
 .app-shell {
   padding-top: 34px;
 }
