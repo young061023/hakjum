@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>학점수호자</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <main class="shell app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">grade guardian</p>
+          <h1>학점수호자</h1>
+          <p>과제, 시험, 출석, 성적 흐름과 교안 기반 문제 생성을 한곳에서 관리합니다.</p>
+        </div>
+        <div class="header-score">
+          <span>현재 GPA</span>
+          <strong id="headerGpa">3.48</strong>
+        </div>
+      </header>
+
+      <nav class="tabbar" aria-label="주요 화면">
+        <a class="tab active" href="./index.html">홈</a>
+        <a class="tab " href="./study.html">과제/공부</a>
+        <a class="tab " href="./calendar.html">캘린더/분석</a>
+        <a class="tab " href="./grade.html">성적 역산</a>
+        <a class="tab " href="./generator.html">문제 생성</a>
+        <a class="tab " href="./auth.html">로그인</a>
+      </nav>
+
+      <section id="dashboardView" class="page-section">
+        <section class="dashboard-grid">
+          <article class="panel hero-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>오늘의 자동 학습 계획</h2>
+                <p>과목별 목표 점수와 시험일까지 남은 시간을 기준으로 오늘 할 일을 계산합니다.</p>
+              </div>
+              <span id="gpaBadge" class="badge ok">계획 생성</span>
+            </div>
+
+            <div class="gpa-layout">
+              <div class="score-block">
+                <span>현재 GPA</span>
+                <strong id="currentGpaText">3.48</strong>
+              </div>
+              <div class="progress-ring" aria-label="목표 달성률">
+                <strong id="gpaPercent">87%</strong>
+                <span>목표 달성</span>
+              </div>
+              <div class="score-block">
+                <span>목표 GPA</span>
+                <strong id="targetGpaText">4.00</strong>
+              </div>
+            </div>
+            <div class="meter">
+              <span id="gpaMeter"></span>
+            </div>
+            <p id="gpaHint" class="status ok">목표까지 0.52 남았어요.</p>
+            <div class="gpa-input-grid">
+              <label class="field compact">
+                <span>내 현재 GPA 입력</span>
+                <input id="currentGpa" type="number" min="0" max="4.5" step="0.01" value="3.48" />
+              </label>
+              <label class="field compact">
+                <span>목표 GPA 입력</span>
+                <input id="targetGpa" type="number" min="0" max="4.5" step="0.01" value="4.00" />
+              </label>
+            </div>
+          </article>
+
+          <article class="panel stat-card">
+            <span>다가오는 과제</span>
+            <strong id="upcomingCount">0건</strong>
+            <p id="nearestTask">등록된 일정이 없습니다.</p>
+          </article>
+
+          <article class="panel stat-card">
+            <span>출석률</span>
+            <strong id="attendanceValue">92%</strong>
+            <p>전체 출석률</p>
+          </article>
+
+          <article class="panel stat-card">
+            <span>공부 연속 기록</span>
+            <strong id="streakValue">14일</strong>
+            <p>연속 학습일</p>
+          </article>
+        </section>
+
+        <section class="panel plan-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>자동 조정된 학습 계획</h2>
+              <p id="planSummary">과목 목표와 시험일을 입력하면 계획이 자동으로 잡힙니다.</p>
+            </div>
+            <button class="secondary link-button" type="button" onclick="location.href='./study.html'">과목 설정</button>
+          </div>
+          <div id="autoPlanList" class="auto-plan-list empty">과목별 시험일과 목표 점수를 설정하세요.</div>
+        </section>
+
+        <section class="panel plan-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>과목별 목표 현황</h2>
+              <p>목표와 시험일이 가까운 과목일수록 자동 계획 우선순위가 올라갑니다.</p>
+            </div>
+          </div>
+          <div id="courseGoalList" class="goal-list empty">등록된 과목 목표가 없습니다.</div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

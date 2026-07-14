@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>문제 생성 - 학점수호자</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <main class="shell app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">grade guardian</p>
+          <h1>학점수호자</h1>
+          <p>과제, 시험, 출석, 성적 흐름과 교안 기반 문제 생성을 한곳에서 관리합니다.</p>
+        </div>
+        <div class="header-score">
+          <span>현재 GPA</span>
+          <strong id="headerGpa">3.48</strong>
+        </div>
+      </header>
+
+      <nav class="tabbar" aria-label="주요 화면">
+        <a class="tab " href="./index.html">홈</a>
+        <a class="tab " href="./study.html">과제/공부</a>
+        <a class="tab " href="./calendar.html">캘린더/분석</a>
+        <a class="tab " href="./grade.html">성적 역산</a>
+        <a class="tab active" href="./generator.html">문제 생성</a>
+        <a class="tab " href="./auth.html">로그인</a>
+      </nav>
+
+      <section id="generatorView" class="page-section">
+        <section class="layout">
+          <form id="generatorForm" class="panel form-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>문제 만들기</h2>
+                <p>기본 API: <code id="apiLabel">5173 프록시 → 8000</code></p>
+              </div>
+              <span id="connectionBadge" class="badge muted">대기</span>
+            </div>
+
+            <label class="field">
+              <span>강의자료</span>
+              <input id="materialFile" type="file" accept=".pdf,.ppt,.pptx" required />
+            </label>
+
+            <div class="grid two">
+              <label class="field">
+                <span>문제 유형</span>
+                <select id="questionType">
+                  <option value="서술형">주관식</option>
+                  <option value="단답형">단답형</option>
+                  <option value="객관식">객관식</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>문제 개수</span>
+                <input id="questionCount" type="number" min="1" max="20" value="3" />
+              </label>
+            </div>
+
+            <div class="grid two">
+              <label class="field">
+                <span>난이도</span>
+                <select id="difficulty">
+                  <option value="normal">보통</option>
+                  <option value="easy">쉬움</option>
+                  <option value="hard">어려움</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>과목명</span>
+                <input id="courseName" type="text" placeholder="예: 암호학" />
+              </label>
+            </div>
+
+            <label class="field">
+              <span>범위 또는 요청사항</span>
+              <textarea id="instruction" rows="4" placeholder="예: 2장 대칭키 암호 중심으로 출제"></textarea>
+            </label>
+
+            <details class="settings">
+              <summary>연결 설정</summary>
+              <div class="grid two">
+                <label class="field">
+                  <span>로컬 API URL</span>
+                  <input id="apiBaseUrl" type="url" value="http://127.0.0.1:8000" />
+                </label>
+                <label class="field">
+                  <span>Supabase URL</span>
+                  <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co" />
+                </label>
+              </div>
+              <label class="field">
+                <span>Supabase anon key</span>
+                <input id="supabaseAnonKey" type="password" placeholder="eyJ..." />
+              </label>
+              <button id="saveSettings" class="secondary" type="button">설정 저장</button>
+            </details>
+
+            <button id="submitButton" class="primary" type="submit">문제 생성</button>
+            <p id="statusText" class="status">PDF/PPT 파일을 선택하고 문제를 생성하세요.</p>
+          </form>
+
+          <aside class="panel flow-panel">
+            <h2>처리 흐름</h2>
+            <ol class="steps">
+              <li><strong>자료 업로드</strong><span>PDF/PPT 텍스트 추출 및 OCR 처리</span></li>
+              <li><strong>교안 검색</strong><span>Chroma DB에서 관련 chunk 검색</span></li>
+              <li><strong>문제 생성</strong><span>파인튜닝 모델로 답안과 기준 생성</span></li>
+              <li><strong>결과 저장</strong><span>Supabase에 생성 이력 저장</span></li>
+            </ol>
+          </aside>
+        </section>
+
+        <section class="panel result-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>생성 결과</h2>
+              <p id="resultMeta">아직 생성된 문제가 없습니다.</p>
+            </div>
+            <button id="copyJson" class="secondary" type="button">JSON 복사</button>
+          </div>
+          <div id="results" class="results empty">생성 완료 후 주관식 문제와 모범답안이 여기에 표시됩니다.</div>
+        </section>
+
+        <section class="panel history-panel">
+          <div class="panel-heading">
+            <div>
+              <h2>Supabase 기록</h2>
+              <p>연결 설정 후 최근 생성 기록을 불러옵니다.</p>
+            </div>
+            <button id="loadHistory" class="secondary" type="button">기록 불러오기</button>
+          </div>
+          <div id="history" class="history empty">저장된 기록이 아직 없습니다.</div>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

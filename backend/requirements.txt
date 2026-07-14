@@ -1,0 +1,8 @@
+flask
+gunicorn
+pydantic
+pypdf
+chromadb
+requests
+numpy
+sympy

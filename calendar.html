@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>캘린더/분석 - 학점수호자</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <main class="shell app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">grade guardian</p>
+          <h1>학점수호자</h1>
+          <p>과제, 시험, 출석, 성적 흐름과 교안 기반 문제 생성을 한곳에서 관리합니다.</p>
+        </div>
+        <div class="header-score">
+          <span>현재 GPA</span>
+          <strong id="headerGpa">3.48</strong>
+        </div>
+      </header>
+
+      <nav class="tabbar" aria-label="주요 화면">
+        <a class="tab " href="./index.html">홈</a>
+        <a class="tab " href="./study.html">과제/공부</a>
+        <a class="tab active" href="./calendar.html">캘린더/분석</a>
+        <a class="tab " href="./grade.html">성적 역산</a>
+        <a class="tab " href="./generator.html">문제 생성</a>
+        <a class="tab " href="./auth.html">로그인</a>
+      </nav>
+
+      <section id="calendarView" class="page-section">
+        <section class="layout">
+          <article class="panel form-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>캘린더</h2>
+                <p id="calendarTitle">이번 달 일정</p>
+              </div>
+              <div class="button-row">
+                <button id="prevMonth" class="secondary" type="button">이전</button>
+                <button id="nextMonth" class="secondary" type="button">다음</button>
+              </div>
+            </div>
+            <div class="calendar-week">
+              <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+            </div>
+            <div id="calendarGrid" class="calendar-grid"></div>
+          </article>
+
+          <aside class="panel flow-panel">
+            <h2>성적 분석</h2>
+            <div class="analysis-list">
+              <div>
+                <span>과제 완료율</span>
+                <strong id="doneRate">0%</strong>
+              </div>
+              <div>
+                <span>위험 과목</span>
+                <strong id="riskCourse">없음</strong>
+              </div>
+              <div>
+                <span>이번 달 일정</span>
+                <strong id="monthTaskCount">0건</strong>
+              </div>
+            </div>
+            <div id="courseBars" class="course-bars"></div>
+          </aside>
+        </section>
+
+        <section class="layout lower-layout">
+          <form id="taskForm" class="panel form-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>일정 추가</h2>
+                <p>과제, 시험, 발표, 공부 일정을 캘린더에 등록합니다.</p>
+              </div>
+            </div>
+
+            <div class="grid two">
+              <label class="field">
+                <span>일정 이름</span>
+                <input id="taskTitle" type="text" placeholder="예: 데이터베이스 보고서 제출" required />
+              </label>
+              <label class="field">
+                <span>과목</span>
+                <input id="taskCourse" type="text" placeholder="예: 데이터베이스 시스템" />
+              </label>
+            </div>
+
+            <div class="grid three">
+              <label class="field">
+                <span>유형</span>
+                <select id="taskType">
+                  <option value="과제">과제</option>
+                  <option value="시험">시험</option>
+                  <option value="발표">발표</option>
+                  <option value="공부">공부</option>
+                </select>
+              </label>
+              <label class="field">
+                <span>마감일</span>
+                <input id="taskDate" type="date" required />
+              </label>
+              <label class="field">
+                <span>진행률</span>
+                <input id="taskProgress" type="number" min="0" max="100" value="0" />
+              </label>
+            </div>
+
+            <button class="primary" type="submit">일정 추가</button>
+          </form>
+
+          <section class="panel result-panel compact-panel">
+            <div class="panel-heading">
+              <div>
+                <h2>일정 목록</h2>
+                <p id="taskSummary">등록된 일정이 없습니다.</p>
+              </div>
+              <button id="clearDoneTasks" class="secondary" type="button">완료 정리</button>
+            </div>
+            <div id="taskList" class="task-list empty">일정을 추가하면 여기에 표시됩니다.</div>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
