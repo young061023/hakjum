@@ -1,6 +1,7 @@
 import tempfile
 import math
 import os
+import re
 from pathlib import Path
 
 from flask import Flask, jsonify, request, render_template_string
@@ -407,6 +408,42 @@ def generate_questions_for_uploaded_pdf(
     )
 
 
+
+def clean_chunk_for_fallback(chunk):
+    text = str(chunk or "")
+    text = re.sub(r"#{1,6}\s*", " ", text)
+    text = re.sub(r"\*\*([^*]+)\*\*", r"\1", text)
+    text = re.sub(r"\[[pP]\.?\s*\d+\]", " ", text)
+    text = re.sub(r"요약\s*기반|개념|출처", " ", text)
+    text = re.sub(r"[·•*]+", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def fallback_question_from_chunk(chunk, question_type="서술형", number=1):
+    clean = clean_chunk_for_fallback(chunk)
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?。])\s+", clean) if len(part.strip()) >= 12]
+    basis = (sentences[0] if sentences else clean[:180]).strip() or "교안의 핵심 개념을 정리한다."
+    concept = re.sub(r"[^0-9A-Za-z가-힣 /()\-]", " ", basis).strip()[:36] or "핵심 개념"
+
+    if question_type == "객관식":
+        return "\n".join([
+            f"문제: 다음 중 교안 내용 '{concept}'에 대한 설명으로 가장 적절한 것은?",
+            "보기:",
+            f"1. {basis[:120]}",
+            "2. 교안 내용과 관계없는 설명이다.",
+            "3. 제시된 개념과 반대되는 설명이다.",
+            "4. 문제에서 확인할 수 없는 설명이다.",
+            "정답: 1번",
+            f"해설: 교안의 해당 부분은 '{basis[:120]}' 내용을 중심으로 설명한다.",
+        ])
+
+    return "\n".join([
+        f"문제: 교안 내용을 바탕으로 '{concept}'의 핵심 내용을 설명하시오.",
+        f"정답: {basis[:180]}",
+        f"해설: 교안의 해당 부분을 근거로 핵심 개념을 요약하면 {basis[:160]}입니다.",
+    ])
+
 def generate_questions_from_chunks(
     chunks,
     sources=None,
@@ -423,7 +460,7 @@ def generate_questions_from_chunks(
     draft_results = []
     attempts = 0
     target_count = max(1, min(int(count or 1), 3))
-    max_attempts = min(len(chunks), target_count)
+    max_attempts = target_count
 
     while len(good_results) + len(draft_results) < target_count and attempts < max_attempts:
         source_index = attempts % len(chunks)
@@ -451,7 +488,9 @@ def generate_questions_from_chunks(
             seen_questions.add(first_line)
             good_results.append(item)
         else:
-            draft_results.append(item)
+            item["question"] = fallback_question_from_chunk(chunk, question_type=question_type, number=attempts + 1)
+            good_results.append(item)
+            draft_results.append({**item, "question": question})
 
         attempts += 1
 

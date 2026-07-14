@@ -498,6 +498,10 @@ def validate_question(text, question_type):
         intent_words = r"무엇|설명|구하|계산|서술|비교|조건|이유|정의|의미"
         if len(problem_text.split()) < 6 and not re.search(intent_words, problem_text):
             errors.append("문제 의도가 불명확함")
+        if re.search(r"도함수|미분", problem_text) and not re.search(r"[fyg]\s*\(|=|x\^|x\d|sin|cos|tan|log|ln|e\^", problem_text):
+            errors.append("함수 식 없음")
+        if re.search(r"다음\s*함수", problem_text) and not re.search(r"[fyg]\s*\(|=|x\^|x\d|sin|cos|tan|log|ln|e\^", problem_text):
+            errors.append("함수 식 없음")
 
     if question_type == "객관식":
         if "보기:" not in text:
