@@ -13,7 +13,6 @@
         <div>
           <p class="eyebrow">grade guardian</p>
           <h1>학점수호자</h1>
-          <p>로그인하면 과목, 교안 요약, 일정, 생성 기록을 Supabase에 저장합니다.</p>
         </div>
         <div class="header-score">
           <span>계정</span>
@@ -35,7 +34,6 @@
           <div class="panel-heading">
             <div>
               <h2>로그인 / 가입</h2>
-              <p>비밀번호는 앱 테이블에 저장하지 않고 Supabase Auth가 관리합니다.</p>
             </div>
           </div>
 
@@ -46,25 +44,47 @@
 
           <label class="field">
             <span>비밀번호</span>
-            <input id="authPassword" type="password" autocomplete="current-password" required />
+            <input
+              id="authPassword"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
           </label>
 
           <div class="button-row">
-            <button id="signInButton" class="primary inline-primary" type="button">로그인</button>
-            <button id="signUpButton" class="secondary" type="button">가입</button>
-            <button id="signOutButton" class="secondary" type="button">로그아웃</button>
+            <button
+              id="signInButton"
+              class="primary inline-primary"
+              type="button"
+            >
+              로그인
+            </button>
+            <button id="signUpButton" class="secondary" type="button">
+              가입
+            </button>
+            <button id="signOutButton" class="secondary" type="button">
+              로그아웃
+            </button>
           </div>
-
-          <p id="authStatus" class="status">Supabase 설정을 확인하는 중입니다.</p>
         </form>
 
         <aside class="panel flow-panel">
           <h2>저장 방식</h2>
           <ol class="steps">
-            <li><strong>로그인</strong><span>Supabase Auth로 사용자 인증</span></li>
-            <li><strong>학습 상태</strong><span>과목, 교안 요약, 일정은 사용자별 저장</span></li>
-            <li><strong>교안 검색</strong><span>Chroma DB는 백엔드 RAG 검색용</span></li>
-            <li><strong>생성 기록</strong><span>문제 생성 결과는 Supabase에 저장</span></li>
+            <li>
+              <strong>로그인</strong>
+            </li>
+            <li>
+              <strong>학습 상태</strong
+              ><span>과목, 교안 요약, 일정은 사용자별 저장</span>
+            </li>
+            <li>
+              <strong>교안 검색</strong>
+            </li>
+            <li>
+              <strong>생성 기록</strong>
+            </li>
           </ol>
         </aside>
       </section>
