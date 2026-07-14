@@ -420,7 +420,86 @@ def clean_chunk_for_fallback(chunk):
     return text
 
 
+def is_math_chunk(chunk):
+    text = str(chunk or "")
+    return bool(re.search(r"극한|연속|미분|도함수|미분계수|평균변화율|조임정리|샌드위치|함수|방정식|부정형|로피탈|삼각함수|sin|cos|tan|lim|f\s*\(|x\^|x\d|\\frac", text, flags=re.I))
+
+
+def is_conceptual_math_question(text):
+    problem_match = re.search(r"문제:\s*([\s\S]*?)(?=\n\s*(?:정답|답|해설)\s*[:：]|$)", str(text or ""))
+    problem = problem_match.group(1).strip() if problem_match else str(text or "")
+    asks_concept = re.search(r"설명|서술|정의|의미|핵심\s*내용|조건은|무엇인가|무엇인지", problem)
+    asks_calculation = re.search(r"계산|구하|풀|값|해|미분하|극한값|연속이\s*되도록|=|x\^|f\s*\(|lim|sin|cos|tan|\\frac", problem, flags=re.I)
+    return bool(asks_concept and not asks_calculation)
+
+
+def fallback_math_question_from_chunk(chunk, question_type="서술형", number=1):
+    clean = clean_chunk_for_fallback(chunk)
+    cases = []
+
+    if re.search(r"조임정리|샌드위치", clean):
+        cases.append((
+            "조임정리(샌드위치 정리)를 이용하여 lim x->0 x^2 sin(1/x)의 값을 계산하시오.",
+            "0",
+            "-x^2 <= x^2 sin(1/x) <= x^2이고 양끝 함수의 극한이 0이므로 조임정리에 의해 극한값은 0입니다.",
+        ))
+    if re.search(r"평균변화율", clean):
+        cases.append((
+            "함수 f(x)=x^2+1의 구간 [1, 3]에서 평균변화율을 계산하시오.",
+            "4",
+            "평균변화율은 (f(3)-f(1))/(3-1)=(10-2)/2=4입니다.",
+        ))
+    if re.search(r"미분계수|도함수|미분", clean):
+        cases.append((
+            "함수 f(x)=x^3-2x의 x=2에서의 도함수 값을 계산하시오.",
+            "10",
+            "f'(x)=3x^2-2이므로 f'(2)=12-2=10입니다.",
+        ))
+    if re.search(r"연속", clean):
+        cases.append((
+            "함수 f(x)=x^2 (x≠2), f(2)=a가 x=2에서 연속이 되도록 하는 a의 값을 구하시오.",
+            "4",
+            "x가 2에 가까워질 때 x^2의 극한은 4이므로 연속이 되려면 a=4입니다.",
+        ))
+    if re.search(r"극한|부정형|로피탈|lim", clean, flags=re.I):
+        cases.append((
+            "lim x->1 (x^2-1)/(x-1)의 값을 계산하시오.",
+            "2",
+            "x^2-1=(x-1)(x+1)이므로 x≠1에서 식은 x+1이고, x->1일 때 값은 2입니다.",
+        ))
+
+    cases.append((
+        "방정식 2x+3=7을 풀어 x의 값을 구하시오.",
+        "x = 2",
+        "양변에서 3을 빼면 2x=4이고, 양변을 2로 나누면 x=2입니다.",
+    ))
+    problem, answer, explanation = cases[(max(0, number - 1)) % len(cases)]
+
+    if question_type == "객관식":
+        option2 = "1" if answer == "0" else "0"
+        option3 = "2" if answer == "4" else "4"
+        return "\n".join([
+            f"문제: {problem}",
+            "보기:",
+            f"1. {answer}",
+            f"2. {option2}",
+            f"3. {option3}",
+            "4. 계산할 수 없다",
+            "정답: 1번",
+            f"해설: {explanation}",
+        ])
+
+    return "\n".join([
+        f"문제: {problem}",
+        f"정답: {answer}",
+        f"해설: {explanation}",
+    ])
+
+
 def fallback_question_from_chunk(chunk, question_type="서술형", number=1):
+    if is_math_chunk(chunk):
+        return fallback_math_question_from_chunk(chunk, question_type=question_type, number=number)
+
     clean = clean_chunk_for_fallback(chunk)
     sentences = [part.strip() for part in re.split(r"(?<=[.!?。])\s+", clean) if len(part.strip()) >= 12]
     basis = (sentences[0] if sentences else clean[:180]).strip() or "교안의 핵심 개념을 정리한다."
@@ -484,7 +563,11 @@ def generate_questions_from_chunks(
 
         first_line = question.splitlines()[0].strip() if question else ""
 
-        if is_good_question(question) and first_line not in seen_questions:
+        if is_math_chunk(chunk) and is_conceptual_math_question(question):
+            item["question"] = fallback_question_from_chunk(chunk, question_type=question_type, number=attempts + 1)
+            good_results.append(item)
+            draft_results.append({**item, "question": question})
+        elif is_good_question(question) and first_line not in seen_questions:
             seen_questions.add(first_line)
             good_results.append(item)
         else:

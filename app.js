@@ -1792,14 +1792,44 @@ function formatMaterialReference(chunk) {
   return [title, ...location, concept ? `${concept} 개념` : "관련 개념"].filter(Boolean).join(" · ");
 }
 
+function cleanQuestionSourceLabel(label) {
+  const cleaned = String(label || "")
+    .replace(/[#*_`]/g, " ")
+    .replace(/\[[pP]\.?\s*\d+\]/g, " ")
+    .replace(/\b요약\s*기반\b/g, " ")
+    .replace(/\b관련\s*개념\b/g, " ")
+    .replace(/\b개념\b/g, " ")
+    .replace(/출처/g, " ")
+    .replace(/uploaded_pdf|local_upload|chunk\s*\d+/gi, " ")
+    .replace(/\s*[·•,]\s*/g, " · ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const parts = cleaned
+    .split(/\s*·\s*/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => !/^(요약|기반|개념|관련|교안)$/.test(part));
+
+  const useful = parts.filter((part) => part.length >= 2);
+  const labelText = useful.slice(-2).join(" / ") || useful[0] || cleaned;
+  return labelText.length > 42 ? `${labelText.slice(0, 42)}...` : labelText;
+}
+
 function formatSource(value) {
   if (!value) return "";
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return cleanQuestionSourceLabel(value);
   if (Array.isArray(value)) return value.map(formatSource).filter(Boolean).join(", ");
   if (typeof value === "object") {
-    return formatMaterialReference({ metadata: value, text: value.text || "" });
+    const meta = value;
+    const direct = meta.concept || meta.section_title || meta.title || meta.material_title || meta.file_name || meta.filename || meta.source;
+    const base = direct || formatMaterialReference({ metadata: meta, text: meta.text || "" });
+    const page = Number(meta.page_number);
+    const slide = Number(meta.slide_number);
+    const location = Number.isFinite(page) && page > 0 ? `${page}쪽` : Number.isFinite(slide) && slide > 0 ? `${slide}슬라이드` : "";
+    return cleanQuestionSourceLabel([base, location].filter(Boolean).join(" · "));
   }
-  return String(value);
+  return cleanQuestionSourceLabel(String(value));
 }
 
 function parseGeneratedQuestion(item, index) {
