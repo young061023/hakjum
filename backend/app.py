@@ -493,23 +493,35 @@ def generate():
 
         chunks = [item["text"] for item in retrieved]
         sources = [item["metadata"] | {"distance": item["distance"]} for item in retrieved]
-        questions, drafts = generate_questions_from_chunks(
-            chunks=chunks,
-            sources=sources,
-            question_type=question_type,
-            count=count,
-        )
+        if not chunks:
+            return jsonify({
+                "ok": False,
+                "error": "Chroma DB에서 해당 교안 chunk를 찾지 못했습니다. 과제/공부 탭에서 교안 요약과 Chroma 저장을 먼저 완료하세요.",
+            }), 400
+
+        try:
+            questions, drafts = generate_questions_from_chunks(
+                chunks=chunks,
+                sources=sources,
+                question_type=question_type,
+                count=count,
+            )
+        except Exception as error:
+            return jsonify({"ok": False, "error": f"파인튜닝 모델 문제 생성 실패: {error}"}), 500
     elif "pdf" in request.files:
         pdf = request.files["pdf"]
         with tempfile.TemporaryDirectory() as tmpdir:
             pdf_path = Path(tmpdir) / "upload.pdf"
             pdf.save(pdf_path)
 
-            questions, drafts = generate_questions_for_uploaded_pdf(
-                pdf_path=pdf_path,
-                question_type=question_type,
-                count=count,
-            )
+            try:
+                questions, drafts = generate_questions_for_uploaded_pdf(
+                    pdf_path=pdf_path,
+                    question_type=question_type,
+                    count=count,
+                )
+            except Exception as error:
+                return jsonify({"ok": False, "error": f"PDF 기반 문제 생성 실패: {error}"}), 500
     else:
         return jsonify({"ok": False, "error": "pdf 파일 또는 material_id가 필요합니다."}), 400
 
