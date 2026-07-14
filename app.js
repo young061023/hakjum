@@ -2291,13 +2291,16 @@ loadHistory?.addEventListener("click", async () => {
 $("#signInButton")?.addEventListener("click", async () => {
   await initSupabase();
   if (!supabaseClient) return updateAuthUi();
+  const authStatus = $("#authStatus");
   const { error } = await supabaseClient.auth.signInWithPassword({
     email: $("#authEmail").value.trim(),
     password: $("#authPassword").value
   });
   if (error) {
-    $("#authStatus").textContent = `로그인 실패: ${error.message}`;
-    $("#authStatus").className = "status error";
+    if (authStatus) {
+      authStatus.textContent = `로그인 실패: ${error.message}`;
+      authStatus.className = "status error";
+    }
     return;
   }
   await initSupabase();
@@ -2307,17 +2310,22 @@ $("#signInButton")?.addEventListener("click", async () => {
 $("#signUpButton")?.addEventListener("click", async () => {
   await initSupabase();
   if (!supabaseClient) return updateAuthUi();
+  const authStatus = $("#authStatus");
   const { error } = await supabaseClient.auth.signUp({
     email: $("#authEmail").value.trim(),
     password: $("#authPassword").value
   });
   if (error) {
-    $("#authStatus").textContent = `가입 실패: ${error.message}`;
-    $("#authStatus").className = "status error";
+    if (authStatus) {
+      authStatus.textContent = `가입 실패: ${error.message}`;
+      authStatus.className = "status error";
+    }
     return;
   }
-  $("#authStatus").textContent = "가입 요청을 보냈습니다. 이메일 확인 설정이 켜져 있으면 메일을 확인하세요.";
-  $("#authStatus").className = "status ok";
+  if (authStatus) {
+    authStatus.textContent = "가입 요청을 보냈습니다. 이메일 확인 설정이 켜져 있으면 메일을 확인하세요.";
+    authStatus.className = "status ok";
+  }
 });
 
 $("#signOutButton")?.addEventListener("click", async () => {
