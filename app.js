@@ -825,60 +825,19 @@ function findCourseForResult() {
 async function vectorizeMaterialText(course, material) {
   if (!course || !material?.summary) return null;
 
-  const file = await getMaterialFile(material);
-  const isPdf = file && (file.type === "application/pdf" || /\.pdf$/i.test(file.name || material.fileName || ""));
   const title = material.title || material.fileName || "교안";
 
-  let response;
-  if (isPdf) {
-    const form = new FormData();
-    form.append("file", file, file.name || material.fileName || `${title}.pdf`);
-    form.append("course_id", course.id);
-    form.append("course_name", course.name);
-    form.append("material_id", material.id);
-    form.append("title", title);
-    response = await fetchWithTimeout("/vectorize-upload", {
-      method: "POST",
-      body: form
-    }, 12000);
-    try {
-      const data = await readJsonResponse(response, "PDF 페이지 기반 Chroma 저장");
-      if (!response.ok || !data.ok) {
-        throw new Error(data.error || "PDF 페이지 기반 Chroma 저장에 실패했습니다.");
-      }
-
-      material.vectorized = true;
-      material.vectorizedSource = "pdf_pages";
-      material.vectorizedAt = new Date().toISOString();
-      material.chunkCount = data.chunk_count || 0;
-      return data;
-    } catch (error) {
-      console.warn(error);
-      response = await fetchWithTimeout("/vectorize-text", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          course_id: course.id,
-          course_name: course.name,
-          material_id: material.id,
-          title,
-          text: material.summary
-        })
-      }, 12000);
-    }
-  } else {
-    response = await fetchWithTimeout("/vectorize-text", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        course_id: course.id,
-        course_name: course.name,
-        material_id: material.id,
-        title,
-        text: material.summary
-      })
-    }, 12000);
-  }
+  const response = await fetchWithTimeout("/vectorize-text", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      course_id: course.id,
+      course_name: course.name,
+      material_id: material.id,
+      title,
+      text: material.summary
+    })
+  }, 45000);
 
   const data = await readJsonResponse(response, "Chroma DB 저장");
   if (!response.ok || !data.ok) {

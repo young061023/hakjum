@@ -127,7 +127,7 @@ def hash_embedding(text, dim=EMBEDDING_DIM):
 
 
 def get_embedding_function():
-    model_name = os.getenv("EMBEDDING_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+    model_name = os.getenv("EMBEDDING_MODEL", "hash")
     if model_name.lower() == "hash":
         return HashEmbeddingFunction()
 
