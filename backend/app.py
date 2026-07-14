@@ -460,9 +460,9 @@ def generate_questions_from_chunks(
     draft_results = []
     attempts = 0
     target_count = max(1, min(int(count or 1), 3))
-    max_attempts = target_count
+    max_attempts = max(target_count * 2, target_count + 2)
 
-    while len(good_results) + len(draft_results) < target_count and attempts < max_attempts:
+    while len(good_results) < target_count and attempts < max_attempts:
         source_index = attempts % len(chunks)
         chunk = chunks[source_index]
         source = sources[source_index] if source_index < len(sources) else {"chunk_index": source_index}
@@ -476,7 +476,7 @@ def generate_questions_from_chunks(
         )
 
         item = {
-            "question_number": len(good_results) + len(draft_results) + 1,
+            "question_number": len(good_results) + 1,
             "source_chunk": source_index,
             "source": source,
             "question": question,
