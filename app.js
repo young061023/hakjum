@@ -1836,6 +1836,17 @@ function parseGeneratedQuestion(item, index) {
   return parsed;
 }
 
+function compactQuestionText(value) {
+  return String(value || "")
+    .replace(/\r/g, "")
+    .replace(/\[([\s\S]*?)\]/g, (_, expr) => `\(${expr.trim()}\)`)
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_, expr) => `\(${expr.trim()}\)`)
+    .replace(/\n\s*(\\\([^)]*\\\)|\$[^$]+\$)\s*\n/g, " $1 ")
+    .replace(/\n+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 function renderQuestions(payload) {
   const questions = normalizeQuestions(payload);
   latestPayload = payload;
@@ -1852,19 +1863,9 @@ function renderQuestions(payload) {
         <article class="question-card">
           <div class="question-head">
             <small>문제 ${index + 1}${parsed.source ? ` · 출처 ${formatSource(parsed.source)}` : ""}</small>
-            <h3>${renderRichText(textOrFallback(parsed.question))}</h3>
+            <h3>${renderRichText(compactQuestionText(textOrFallback(parsed.question)))}</h3>
           </div>
-          <div class="answer-grid">
-            <div class="answer-block">
-              <h4>모범답안</h4>
-              <p>${renderRichText(textOrFallback(answerParts, "응답에 모범답안 필드가 없습니다."))}</p>
-            </div>
-            <div class="answer-block">
-              <h4>필수 키워드 / 채점 기준</h4>
-              <p>${renderRichText(textOrFallback(parsed.keywords))}</p>
-              <p>${renderRichText(textOrFallback(parsed.rubric))}</p>
-            </div>
-          </div>
+          <div id="answerReveal-${index}" class="answer-grid answer-reveal" hidden></div>
           <div class="grading-box">
             <label class="field">
               <span>내 답안</span>
@@ -1915,6 +1916,25 @@ function renderHistory(rows) {
 function renderGradingResult(index, grading) {
   const box = $(`#gradingResult-${index}`);
   if (!box) return;
+  const parsed = renderedQuestions[index] || {};
+  const answerParts = [parsed.answer, parsed.explanation && `해설: ${parsed.explanation}`]
+    .filter(Boolean)
+    .join("\n\n");
+  const reveal = $(`#answerReveal-${index}`);
+  if (reveal) {
+    reveal.hidden = false;
+    reveal.innerHTML = `
+      <div class="answer-block">
+        <h4>모범답안</h4>
+        <p>${renderRichText(textOrFallback(answerParts, "응답에 모범답안 필드가 없습니다."))}</p>
+      </div>
+      <div class="answer-block">
+        <h4>필수 키워드 / 채점 기준</h4>
+        <p>${renderRichText(textOrFallback(parsed.keywords))}</p>
+        <p>${renderRichText(textOrFallback(parsed.rubric))}</p>
+      </div>
+    `;
+  }
   const strengths = Array.isArray(grading.strengths) ? grading.strengths : [];
   const missing = Array.isArray(grading.missing_keywords) ? grading.missing_keywords : [];
   const relatedChunks = Array.isArray(grading.related_chunks) ? grading.related_chunks : [];
@@ -1944,6 +1964,7 @@ function renderGradingResult(index, grading) {
       }
     </div>
   `;
+  if (reveal) typesetMath(reveal);
   typesetMath(box);
 }
 
