@@ -359,18 +359,27 @@ def vectorize_text(material_id, text, course_id=None, course_name="", title="", 
     return {"material_id": material_id, "chunk_count": len(ids), "status": "vectorized"}
 
 
+def build_chroma_where(course_id=None, material_id=None):
+    filters = []
+    if course_id:
+        filters.append({"course_id": str(course_id)})
+    if material_id:
+        filters.append({"material_id": str(material_id)})
+    if not filters:
+        return None
+    if len(filters) == 1:
+        return filters[0]
+    return {"$and": filters}
+
+
 def search_material_chunks(query, course_id=None, material_id=None, limit=5):
     collection = get_collection()
-    where = {}
-    if course_id:
-        where["course_id"] = str(course_id)
-    if material_id:
-        where["material_id"] = str(material_id)
+    where = build_chroma_where(course_id=course_id, material_id=material_id)
 
     result = collection.query(
         query_texts=[query],
         n_results=limit,
-        where=where or None,
+        where=where,
         include=["documents", "metadatas", "distances"],
     )
 

@@ -14,6 +14,8 @@ let timerId = null;
 let timerStartedAt = 0;
 let timerElapsed = 0;
 let courseEditMode = false;
+let activeGeneratorMaterialId = "";
+let activeGeneratorMaterialTitle = "";
 const courseFiles = new Map();
 
 const state = loadPlannerState();
@@ -1517,6 +1519,8 @@ async function useActiveMaterialForQuestions() {
     ? `교안 "${material.title}" 범위 안에서 문제를 생성해줘.\n\n아래 요점정리를 참고해줘.\n\n${material.summary.slice(0, 1800)}`
     : summaryInstruction.value.trim();
   const file = await getMaterialFile(material);
+  activeGeneratorMaterialId = material.id;
+  activeGeneratorMaterialTitle = material.title || material.fileName || "";
 
   localStorage.setItem(
     pendingGenerationKey,
@@ -1548,6 +1552,8 @@ async function loadPendingGeneration() {
   const pending = JSON.parse(localStorage.getItem(pendingGenerationKey) || "null");
   if (!pending) return;
 
+  activeGeneratorMaterialId = pending.materialId || "";
+  activeGeneratorMaterialTitle = pending.materialTitle || pending.fileName || "";
   if (courseName) courseName.value = pending.courseName || "";
   if (instruction) instruction.value = pending.instruction || "";
 
@@ -1563,7 +1569,7 @@ async function loadPendingGeneration() {
     materialFile.files = transfer.files;
     setStatus(`${pending.materialTitle || file.name} 교안 파일이 자동 연결됐습니다.`, "ok");
   } else {
-    setStatus(`${pending.materialTitle || pending.fileName} 교안 정보는 연결됐지만 저장된 파일을 찾지 못했습니다.`, "error");
+    setStatus(`${pending.materialTitle || pending.fileName} 교안 정보가 연결됐습니다. 저장된 파일 없이 Chroma DB 교안으로 문제를 생성할 수 있습니다.`, "ok");
   }
   localStorage.removeItem(pendingGenerationKey);
 }
@@ -1648,13 +1654,30 @@ function getDisplayApiLabel() {
   return base;
 }
 
+function getBackendQuestionType() {
+  const value = questionType?.value || "short_answer";
+  const map = {
+    short_answer: "주관식",
+    multiple_choice: "객관식",
+    mixed: "서술형",
+    essay: "서술형"
+  };
+  return map[value] || value;
+}
+
 function buildFormData() {
   const data = new FormData();
-  data.append("file", materialFile.files[0]);
-  data.append("pdf", materialFile.files[0]);
-  data.append("material", materialFile.files[0]);
-  data.append("question_type", questionType.value);
-  data.append("type", questionType.value);
+  const file = materialFile?.files?.[0];
+  if (file) {
+    data.append("file", file);
+    data.append("pdf", file);
+    data.append("material", file);
+  }
+  if (activeGeneratorMaterialId) {
+    data.append("material_id", activeGeneratorMaterialId);
+  }
+  data.append("question_type", getBackendQuestionType());
+  data.append("type", getBackendQuestionType());
   data.append("count", questionCount.value);
   data.append("num_questions", questionCount.value);
   data.append("difficulty", difficulty.value);
@@ -1670,7 +1693,7 @@ async function saveResultToSupabase(payload) {
   const row = {
     user_id: currentUser.id,
     course_name: courseName.value.trim() || null,
-    material_name: materialFile.files[0]?.name || null,
+    material_name: materialFile.files[0]?.name || activeGeneratorMaterialTitle || null,
     question_type: questionType.value,
     question_count: Number(questionCount.value),
     difficulty: difficulty.value,
@@ -2283,8 +2306,8 @@ $("#resetTimer")?.addEventListener("click", () => {
 form?.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  if (!materialFile.files[0]) {
-    setStatus("강의자료 파일을 먼저 선택하세요.", "error");
+  if (!materialFile.files[0] && !activeGeneratorMaterialId) {
+    setStatus("강의자료 파일을 선택하거나 과제/공부 탭에서 교안을 문제 생성에 연결하세요.", "error");
     return;
   }
 
