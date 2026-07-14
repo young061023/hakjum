@@ -3,14 +3,17 @@ const plannerKey = "hakjum-planner-state";
 const pendingGenerationKey = "hakjum-pending-generation";
 const materialDbName = "hakjum-material-files";
 const materialStoreName = "files";
+const profileKey = "hakjum-user-profile";
 
 let latestPayload = null;
 let supabaseClient = null;
 let currentUser = null;
 let calendarDate = new Date();
+let selectedCalendarDate = new Date().toISOString().slice(0, 10);
 let timerId = null;
 let timerStartedAt = 0;
 let timerElapsed = 0;
+let courseEditMode = false;
 const courseFiles = new Map();
 
 const state = loadPlannerState();
@@ -53,6 +56,39 @@ const summaryStatus = $("#summaryStatus");
 const courseSummary = $("#courseSummary");
 const courseSummaryMeta = $("#courseSummaryMeta");
 
+function loadProfile() {
+  try {
+    return { name: "", major: "", photo: "", ...JSON.parse(localStorage.getItem(profileKey) || "{}") };
+  } catch {
+    return { name: "", major: "", photo: "" };
+  }
+}
+
+function enhanceShell() {
+  const icons = ["⌂", "✓", "□", "↗", "✦", "○"];
+  $$(".tabbar .tab").forEach((tab, index) => {
+    if (tab.querySelector(".nav-icon")) return;
+    const label = tab.textContent.trim();
+    tab.innerHTML = `<span class="nav-icon" aria-hidden="true">${icons[index] || "•"}</span><span class="nav-label">${label}</span>`;
+    tab.setAttribute("aria-label", label);
+  });
+
+  const header = $(".app-header");
+  if (!header || header.querySelector(".global-profile-link")) return;
+  const profile = loadProfile();
+  const email = currentUser?.email || "";
+  const name = profile.name || currentUser?.user_metadata?.name || (email ? email.split("@")[0] : "로그인");
+  const major = profile.major || (currentUser ? "전공을 등록하세요" : "계정 연결");
+  const avatar = profile.photo
+    ? `<img src="${profile.photo}" alt="" />`
+    : `<span>${escapeHtml((name || "G").slice(0, 1).toUpperCase())}</span>`;
+  const link = document.createElement("a");
+  link.className = "global-profile-link";
+  link.href = "./auth.html";
+  link.innerHTML = `<span class="global-avatar">${avatar}</span><span><strong>${escapeHtml(name)}</strong><small>${escapeHtml(major)}</small></span>`;
+  header.appendChild(link);
+}
+
 const endpointCandidates = ["/generate"];
 let renderedQuestions = [];
 
@@ -63,6 +99,7 @@ function loadPlannerState() {
     attendance: 92,
     streak: 14,
     studySeconds: 0,
+    studyDate: todayText(),
     activeCourseId: "course-default",
     courses: [
       {
@@ -100,7 +137,11 @@ function loadPlannerState() {
   };
 
   try {
-    return { ...fallback, ...JSON.parse(localStorage.getItem(plannerKey) || "{}") };
+    const loaded = { ...fallback, ...JSON.parse(localStorage.getItem(plannerKey) || "{}") };
+    const today = todayText();
+    if (loaded.studyDate && loaded.studyDate !== today) loaded.studySeconds = 0;
+    loaded.studyDate = today;
+    return loaded;
   } catch {
     return fallback;
   }
@@ -214,7 +255,12 @@ async function loadPlannerStateFromSupabase() {
 function updateAuthUi() {
   const label = $("#authStateLabel");
   const status = $("#authStatus");
-  if (label) label.textContent = currentUser ? "로그인됨" : "로그아웃";
+  const authForm = $("#authForm");
+  const accountPanel = $("#accountPanel");
+  const profile = loadProfile();
+  if (label) label.textContent = currentUser ? "로그인됨" : "로그인";
+  if (authForm) authForm.hidden = Boolean(currentUser);
+  if (accountPanel) accountPanel.hidden = !currentUser;
   if (status) {
     status.textContent = currentUser
       ? `${currentUser.email} 계정으로 로그인했습니다.`
@@ -223,6 +269,25 @@ function updateAuthUi() {
         : "Supabase URL과 anon key가 서버에 설정되어 있지 않습니다.";
     status.className = `status ${currentUser ? "ok" : ""}`.trim();
   }
+
+  if (currentUser) {
+    const email = currentUser.email || "";
+    const name = profile.name || currentUser.user_metadata?.name || email.split("@")[0] || "사용자";
+    const major = profile.major || "전공을 입력하세요.";
+    if ($("#accountName")) $("#accountName").textContent = name;
+    if ($("#accountMajor")) $("#accountMajor").textContent = major;
+    if ($("#accountEmail")) $("#accountEmail").textContent = email;
+    if ($("#profileName")) $("#profileName").value = profile.name || "";
+    if ($("#profileMajor")) $("#profileMajor").value = profile.major || "";
+    const avatar = $("#accountAvatar");
+    if (avatar) {
+      avatar.src = profile.photo || "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+      avatar.dataset.initial = name.slice(0, 1).toUpperCase();
+      if (avatar.parentElement) avatar.parentElement.dataset.initial = name.slice(0, 1).toUpperCase();
+    }
+  }
+  $(".global-profile-link")?.remove();
+  enhanceShell();
 }
 
 function setStatus(message, stateName = "") {
@@ -239,6 +304,8 @@ function setBadge(message, stateName = "muted") {
 
 function renderAll() {
   ensureAutoStudyPlan();
+  enhanceShell();
+  $$("#headerGpa").forEach((node) => { node.textContent = (Number(state.currentGpa) || 0).toFixed(2); });
   if ($("#dashboardView")) renderDashboard();
   if (courseTabs) renderCourses();
   if ($("#wrongNoteList")) renderWrongNotes();
@@ -402,14 +469,18 @@ function renderDashboard() {
   const nearest = upcoming[0];
   const autoTasks = getAutoTasks();
   const todayAutoTasks = autoTasks.filter((task) => task.date === todayText());
+  const todayTasks = state.tasks.filter((task) => task.date <= todayText() && (task.endDate || task.date) >= todayText());
+  const plannedMinutes = todayAutoTasks.reduce((sum, task) => sum + (Number(task.minutes) || 0), 0);
+  const studiedMinutes = Math.floor((Number(state.studySeconds) || 0) / 60);
+  const dailyPercent = plannedMinutes ? Math.min(100, Math.round((studiedMinutes / plannedMinutes) * 100)) : 0;
 
   $("#currentGpaText").textContent = current.toFixed(2);
   $("#targetGpaText").textContent = target.toFixed(2);
   $("#headerGpa").textContent = current.toFixed(2);
   if ($("#currentGpa") && document.activeElement !== $("#currentGpa")) $("#currentGpa").value = current.toFixed(2);
   if ($("#targetGpa") && document.activeElement !== $("#targetGpa")) $("#targetGpa").value = target.toFixed(2);
-  $("#gpaPercent").textContent = `${percent}%`;
-  $("#gpaMeter").style.width = `${percent}%`;
+  if ($("#gpaPercent")) $("#gpaPercent").textContent = `${percent}%`;
+  if ($("#gpaMeter")) $("#gpaMeter").style.width = `${dailyPercent}%`;
   $("#gpaHint").textContent = gap === "0.00" ? "목표 GPA를 달성했어요." : `목표까지 ${gap} 남았어요.`;
   $("#gpaBadge").textContent = todayAutoTasks.length ? `오늘 ${todayAutoTasks.length}개` : "계획 대기";
   $("#gpaBadge").className = `badge ${autoTasks.length ? "ok" : ""}`;
@@ -419,8 +490,59 @@ function renderDashboard() {
     : "등록된 일정이 없습니다.";
   $("#attendanceValue").textContent = `${state.attendance}%`;
   $("#streakValue").textContent = `${state.streak}일`;
+  if ($("#dailyQuotaValue")) $("#dailyQuotaValue").textContent = `${dailyPercent}%`;
+  if ($("#dailyQuotaMeta")) $("#dailyQuotaMeta").textContent = plannedMinutes
+    ? `${studiedMinutes}분 완료 · 오늘 계획 ${plannedMinutes}분`
+    : "오늘 자동 계획이 없습니다.";
+  if ($("#totalStudyTime")) $("#totalStudyTime").textContent = formatStudyDuration(state.studySeconds);
+  if ($("#dashboardSummary")) $("#dashboardSummary").textContent = `${state.courses.length}개 과목 · 남은 일정 ${upcoming.length}개 · 오늘 공부 ${formatStudyDuration(state.studySeconds)}`;
+  renderTodaySchedule(todayTasks);
+  renderOverviewGraph();
   renderAutoPlanDashboard(autoTasks, todayAutoTasks);
   renderCourseGoalDashboard();
+}
+
+function formatStudyDuration(seconds) {
+  const minutes = Math.floor((Number(seconds) || 0) / 60);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return hours ? `${hours}시간 ${rest}분` : `${minutes}분`;
+}
+
+function renderTodaySchedule(tasks) {
+  const list = $("#todayScheduleList");
+  if (!list) return;
+  if ($("#todayScheduleMeta")) $("#todayScheduleMeta").textContent = tasks.length ? `오늘 ${tasks.length}개의 일정이 있어요.` : "오늘은 등록된 일정이 없어요.";
+  if (!tasks.length) {
+    list.className = "today-schedule-list empty";
+    list.textContent = "오늘 일정이 없습니다.";
+    return;
+  }
+  list.className = "today-schedule-list";
+  list.innerHTML = tasks.slice(0, 6).map((task) => `<article class="today-schedule-item ${getTaskTone(task)}"><span>${escapeHtml(task.type)}</span><div><strong>${escapeHtml(task.title)}</strong><small>${escapeHtml(task.course || "과목 없음")} · ${task.progress || 0}%</small></div></article>`).join("");
+}
+
+function renderOverviewGraph() {
+  const graph = $("#gradeOverviewGraph");
+  if (!graph) return;
+  if (!state.courses.length) {
+    graph.className = "overview-graph empty";
+    graph.textContent = "과목을 추가하면 그래프가 표시됩니다.";
+    return;
+  }
+  graph.className = "overview-graph";
+  graph.innerHTML = state.courses.slice(0, 6).map((course) => {
+    const current = Math.max(0, Math.min(100, Number(course.currentScore) || 0));
+    const target = Math.max(current, Math.min(100, Number(course.targetScore) || 0));
+    return `<div class="overview-bar"><span>${escapeHtml(course.name)}</span><div class="overview-track"><i style="width:${target}%"></i><b style="width:${current}%"></b></div><small>${current} / ${target}</small></div>`;
+  }).join("");
+}
+
+function getTaskTone(task) {
+  const type = String(task?.type || "");
+  if (type.includes("시험")) return "exam";
+  if (type.includes("공부")) return "study";
+  return "assignment";
 }
 
 function renderAutoPlanDashboard(autoTasks, todayAutoTasks) {
@@ -527,13 +649,13 @@ function renderTasks() {
   list.innerHTML = tasks
     .map(
       (task) => `
-        <article class="task-item ${task.done ? "done" : ""}">
+        <article class="task-item ${task.done ? "done" : ""} ${getTaskTone(task)}">
           <div>
             <h3>${escapeHtml(task.title)}</h3>
             <div class="task-meta">
               <span>${escapeHtml(task.type)}</span>
               <span>${escapeHtml(task.course || "과목 없음")}</span>
-              <span>${formatDate(task.date)}</span>
+              <span>${formatDate(task.date)}${task.endDate && task.endDate !== task.date ? ` ~ ${formatDate(task.endDate)}` : ""}</span>
               <span>${task.progress}%</span>
             </div>
             <div class="mini-meter"><span style="width:${task.progress}%"></span></div>
@@ -616,7 +738,9 @@ function renderCourses() {
     .map(
       (course) => `
         <button class="course-tab ${course.id === active.id ? "active" : ""}" type="button" data-course-id="${course.id}">
-          ${escapeHtml(course.name || "이름 없음")}
+          <strong>${escapeHtml(course.name || "이름 없음")}</strong>
+          <span>${course.examDate ? `시험 ${formatDate(course.examDate)}` : "시험일 미정"}</span>
+          <small>현재 ${course.currentScore} · 목표 ${course.targetScore}</small>
         </button>
       `
     )
@@ -627,6 +751,13 @@ function renderCourses() {
   if (courseCurrentScore) courseCurrentScore.value = active.currentScore;
   if (courseTargetScore) courseTargetScore.value = active.targetScore;
   if (courseWeeklyHours) courseWeeklyHours.value = active.weeklyHours;
+  if ($("#activeCourseTitle")) $("#activeCourseTitle").textContent = active.name || "이름 없는 과목";
+  if ($("#activeCourseMeta")) $("#activeCourseMeta").textContent = `${active.materials.length}개 교안 · ${active.wrongNotes.length}개 오답`;
+  if ($("#courseSummaryExam")) $("#courseSummaryExam").textContent = active.examDate ? formatDate(active.examDate) : "미정";
+  if ($("#courseSummaryCurrent")) $("#courseSummaryCurrent").textContent = `${active.currentScore}점`;
+  if ($("#courseSummaryTarget")) $("#courseSummaryTarget").textContent = `${active.targetScore}점`;
+  if ($("#courseSummaryHours")) $("#courseSummaryHours").textContent = `${active.weeklyHours}시간`;
+  if ($("#courseEditorPanel")) $("#courseEditorPanel").hidden = !courseEditMode;
   renderCoursePlanPreview(active);
   renderMaterials(active);
   courseSummaryMeta.textContent = activeMaterial
@@ -876,25 +1007,62 @@ function renderCalendar() {
   const start = new Date(year, month, 1 - first.getDay());
 
   $("#calendarTitle").textContent = `${year}년 ${month + 1}월`;
+  populateCalendarSelectors(year, month);
 
   const days = Array.from({ length: 42 }, (_, index) => {
     const date = new Date(start);
     date.setDate(start.getDate() + index);
     const text = toDateText(date);
-    const items = state.tasks.filter((task) => task.date === text);
+    const items = state.tasks.filter((task) => task.date <= text && (task.endDate || task.date) >= text);
     const muted = date.getMonth() !== month ? "muted" : "";
+    const selected = text === selectedCalendarDate ? "selected" : "";
+    const today = text === todayText() ? "today" : "";
 
     return `
-      <div class="calendar-day ${muted}">
+      <button class="calendar-day ${muted} ${selected} ${today}" type="button" data-date="${text}">
         <strong>${date.getDate()}</strong>
         <div class="dot-list">
-          ${items.map((item) => `<span class="dot">${escapeHtml(item.type)} · ${escapeHtml(item.title)}</span>`).join("")}
+          ${items.slice(0, 3).map((item) => `<span class="dot ${getTaskTone(item)}">${escapeHtml(item.type)} · ${escapeHtml(item.title)}</span>`).join("")}
+          ${items.length > 3 ? `<span class="calendar-more">+${items.length - 3}</span>` : ""}
         </div>
-      </div>
+      </button>
     `;
   });
 
   grid.innerHTML = days.join("");
+  renderSelectedDateSchedule();
+}
+
+function populateCalendarSelectors(year, month) {
+  const yearSelect = $("#calendarYear");
+  const monthSelect = $("#calendarMonth");
+  if (yearSelect && !yearSelect.options.length) {
+    yearSelect.innerHTML = Array.from({ length: 11 }, (_, index) => year - 5 + index).map((value) => `<option value="${value}">${value}년</option>`).join("");
+  }
+  if (monthSelect && !monthSelect.options.length) {
+    monthSelect.innerHTML = Array.from({ length: 12 }, (_, index) => `<option value="${index}">${index + 1}월</option>`).join("");
+  }
+  if (yearSelect) yearSelect.value = String(year);
+  if (monthSelect) monthSelect.value = String(month);
+  if ($("#calendarDatePicker") && document.activeElement !== $("#calendarDatePicker")) $("#calendarDatePicker").value = selectedCalendarDate;
+}
+
+function renderSelectedDateSchedule() {
+  const list = $("#selectedScheduleList");
+  const inline = $("#selectedDateInline");
+  const tasks = state.tasks.filter((task) => task.date <= selectedCalendarDate && (task.endDate || task.date) >= selectedCalendarDate);
+  const formatted = formatDate(selectedCalendarDate);
+  if ($("#selectedScheduleTitle")) $("#selectedScheduleTitle").textContent = `${formatted} 일정`;
+  if ($("#selectedDateLabel")) $("#selectedDateLabel").textContent = formatted;
+  if ($("#selectedDateCount")) $("#selectedDateCount").textContent = `일정 ${tasks.length}개`;
+  const markup = tasks.length
+    ? tasks.map((task) => `<article class="selected-schedule-item ${getTaskTone(task)}"><span>${escapeHtml(task.type)}</span><div><strong>${escapeHtml(task.title)}</strong><small>${escapeHtml(task.course || "과목 없음")}${task.endDate && task.endDate !== task.date ? ` · ${formatDate(task.date)}~${formatDate(task.endDate)}` : ""}</small></div></article>`).join("")
+    : "";
+  if (list) {
+    list.className = tasks.length ? "selected-schedule-list" : "selected-schedule-list empty";
+    list.innerHTML = tasks.length ? markup : "일정이 없습니다.";
+  }
+  if (inline) inline.innerHTML = tasks.length ? markup : "일정이 없습니다.";
 }
 
 function renderAnalysis() {
@@ -1901,20 +2069,54 @@ $("#autoPlanList")?.addEventListener("click", (event) => {
 
 $("#taskForm")?.addEventListener("submit", (event) => {
   event.preventDefault();
+  const startDate = $("#taskDate").value;
+  const endDate = $("#taskEndDate")?.value || startDate;
+  if (endDate < startDate) {
+    $("#taskEndDate").setCustomValidity("종료일은 시작일보다 빠를 수 없습니다.");
+    $("#taskEndDate").reportValidity();
+    return;
+  }
+  $("#taskEndDate")?.setCustomValidity("");
   state.tasks.push({
     id: crypto.randomUUID(),
     title: $("#taskTitle").value.trim(),
     course: $("#taskCourse").value.trim(),
     type: $("#taskType").value,
-    date: $("#taskDate").value,
+    date: startDate,
+    endDate,
     progress: Math.max(0, Math.min(100, Number($("#taskProgress").value) || 0)),
     done: false
   });
   event.currentTarget.reset();
   $("#taskProgress").value = 0;
   $("#taskDate").value = todayText();
+  if ($("#taskEndDate")) $("#taskEndDate").value = todayText();
   savePlannerState();
   renderAll();
+  closeTaskModal();
+});
+
+function openTaskModal() {
+  if ($("#taskModal")) $("#taskModal").hidden = false;
+  if ($("#taskDate")) $("#taskDate").value = selectedCalendarDate || todayText();
+  if ($("#taskEndDate")) $("#taskEndDate").value = selectedCalendarDate || todayText();
+  $("#taskTitle")?.focus();
+}
+
+function closeTaskModal() {
+  if ($("#taskModal")) $("#taskModal").hidden = true;
+}
+
+$("#openTaskModal")?.addEventListener("click", openTaskModal);
+$("#closeTaskModal")?.addEventListener("click", closeTaskModal);
+$("#cancelTaskModal")?.addEventListener("click", closeTaskModal);
+$("#taskModal")?.addEventListener("click", (event) => { if (event.target.id === "taskModal") closeTaskModal(); });
+$("#calendarGrid")?.addEventListener("click", (event) => {
+  const day = event.target.closest("[data-date]");
+  if (!day) return;
+  selectedCalendarDate = day.dataset.date;
+  calendarDate = new Date(`${selectedCalendarDate}T00:00:00`);
+  renderCalendar();
 });
 
 $("#taskList")?.addEventListener("click", (event) => {
@@ -2005,14 +2207,46 @@ $("#startTimer")?.addEventListener("click", () => {
 
 $("#stopTimer")?.addEventListener("click", () => {
   if (!timerId) return;
-  timerElapsed = getTimerSeconds();
+  state.studySeconds += getTimerSeconds();
+  timerElapsed = 0;
   clearInterval(timerId);
   timerId = null;
+  savePlannerState();
   renderTimer();
 });
 
+$("#calendarYear")?.addEventListener("change", (event) => {
+  calendarDate.setFullYear(Number(event.target.value));
+  renderCalendar();
+  renderAnalysis();
+});
+
+$("#calendarMonth")?.addEventListener("change", (event) => {
+  calendarDate.setMonth(Number(event.target.value));
+  renderCalendar();
+  renderAnalysis();
+});
+
+$("#calendarDatePicker")?.addEventListener("change", (event) => {
+  if (!event.target.value) return;
+  selectedCalendarDate = event.target.value;
+  calendarDate = new Date(`${selectedCalendarDate}T00:00:00`);
+  renderCalendar();
+  renderAnalysis();
+});
+
+$("#toggleCalendar")?.addEventListener("click", () => {
+  const panel = $("#calendarPanel");
+  const bar = $("#collapsedDateBar");
+  if (!panel || !bar) return;
+  const closing = !panel.hidden;
+  panel.hidden = closing;
+  bar.hidden = !closing;
+  $("#toggleCalendar").classList.toggle("active", closing);
+  $("#toggleCalendar").setAttribute("aria-label", closing ? "캘린더 열기" : "캘린더 닫기");
+});
+
 $("#resetTimer")?.addEventListener("click", () => {
-  state.studySeconds += getTimerSeconds();
   timerElapsed = 0;
   clearInterval(timerId);
   timerId = null;
@@ -2059,29 +2293,55 @@ apiBaseUrl?.addEventListener("input", () => {
 });
 
 $("#addCourse")?.addEventListener("click", () => {
+  const modal = $("#courseModal");
+  if (modal) modal.hidden = false;
+  $("#newCourseName")?.focus();
+});
+
+function closeCourseModal() {
+  if ($("#courseModal")) $("#courseModal").hidden = true;
+}
+
+$("#closeCourseModal")?.addEventListener("click", closeCourseModal);
+$("#cancelCourseModal")?.addEventListener("click", closeCourseModal);
+$("#courseModal")?.addEventListener("click", (event) => { if (event.target.id === "courseModal") closeCourseModal(); });
+
+$("#courseCreateForm")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const name = $("#newCourseName").value.trim();
+  if (!name) return;
   const course = {
     id: crypto.randomUUID(),
-    name: `새 과목 ${state.courses.length + 1}`,
-    examDate: "",
-    currentScore: 70,
-    targetScore: 90,
-    weeklyHours: 6,
+    name,
+    examDate: $("#newCourseExamDate").value,
+    currentScore: Math.max(0, Math.min(100, Number($("#newCourseCurrentScore").value) || 0)),
+    targetScore: Math.max(0, Math.min(100, Number($("#newCourseTargetScore").value) || 0)),
+    weeklyHours: Math.max(1, Math.min(40, Number($("#newCourseWeeklyHours").value) || 1)),
     activeMaterialId: "",
-    materials: []
+    materials: [],
+    wrongNotes: []
   };
   state.courses.push(course);
   state.activeCourseId = course.id;
+  syncCourseExamTask(course);
+  courseEditMode = false;
   courseMaterialFile.value = "";
   materialTitle.value = "";
   savePlannerState();
   renderCourses();
   renderWrongNotes();
+  event.currentTarget.reset();
+  $("#newCourseCurrentScore").value = 70;
+  $("#newCourseTargetScore").value = 90;
+  $("#newCourseWeeklyHours").value = 6;
+  closeCourseModal();
 });
 
 courseTabs?.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-course-id]");
   if (!button) return;
   state.activeCourseId = button.dataset.courseId;
+  courseEditMode = false;
   courseMaterialFile.value = "";
   materialTitle.value = "";
   savePlannerState();
@@ -2089,7 +2349,19 @@ courseTabs?.addEventListener("click", (event) => {
   renderWrongNotes();
 });
 
+$("#editCourse")?.addEventListener("click", () => {
+  courseEditMode = true;
+  renderCourses();
+  $("#courseEditorPanel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+$("#cancelCourseEdit")?.addEventListener("click", () => {
+  courseEditMode = false;
+  renderCourses();
+});
+
 courseEditorName?.addEventListener("input", (event) => {
+  if (!courseEditMode) return;
   const active = getActiveCourse();
   active.name = event.target.value.trim();
   syncCourseExamTask(active);
@@ -2098,6 +2370,7 @@ courseEditorName?.addEventListener("input", (event) => {
 });
 
 function updateActiveCourseGoal(field, value) {
+  if (!courseEditMode) return;
   const active = getActiveCourse();
   active[field] = value;
   if (field === "examDate") syncCourseExamTask(active);
@@ -2370,7 +2643,29 @@ $("#signOutButton")?.addEventListener("click", async () => {
   updateAuthUi();
 });
 
+$("#saveProfile")?.addEventListener("click", () => {
+  const profile = loadProfile();
+  profile.name = $("#profileName")?.value.trim() || "";
+  profile.major = $("#profileMajor")?.value.trim() || "";
+  localStorage.setItem(profileKey, JSON.stringify(profile));
+  updateAuthUi();
+});
+
+$("#profilePhotoInput")?.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    const profile = loadProfile();
+    profile.photo = String(reader.result || "");
+    localStorage.setItem(profileKey, JSON.stringify(profile));
+    updateAuthUi();
+  });
+  reader.readAsDataURL(file);
+});
+
 if ($("#taskDate")) $("#taskDate").value = todayText();
+if ($("#taskEndDate")) $("#taskEndDate").value = todayText();
 async function boot() {
   await loadSettings();
   renderAll();

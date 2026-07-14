@@ -1,147 +1,48 @@
 <!doctype html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>과제/공부 - 학점수호자</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  </head>
+  <head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" /><title>과제·공부 - 학점수호자</title><link rel="stylesheet" href="./styles.css" /><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head>
   <body>
     <main class="shell app-shell">
-      <header class="app-header">
-        <div>
-          <p class="eyebrow">grade guardian</p>
-          <h1>학점수호자</h1>
-          <p>과제, 시험, 출석, 성적 흐름과 교안 기반 문제 생성을 한곳에서 관리합니다.</p>
-        </div>
-        <div class="header-score">
-          <span>현재 GPA</span>
-          <strong id="headerGpa">3.48</strong>
-        </div>
-      </header>
-
-      <nav class="tabbar" aria-label="주요 화면">
-        <a class="tab " href="./index.html">홈</a>
-        <a class="tab active" href="./study.html">과제/공부</a>
-        <a class="tab " href="./calendar.html">캘린더/분석</a>
-        <a class="tab " href="./grade.html">성적 역산</a>
-        <a class="tab " href="./generator.html">문제 생성</a>
-        <a class="tab " href="./auth.html">로그인</a>
-      </nav>
+      <header class="app-header"><div><p class="eyebrow">STUDY SPACE</p><h1>과제·공부</h1><p>과목을 선택해 필요한 정보와 교안만 관리하세요.</p></div><div class="header-score"><span>현재 GPA</span><strong id="headerGpa">3.48</strong></div></header>
+      <nav class="tabbar" aria-label="주요 화면"><a class="tab" href="./index.html">홈</a><a class="tab active" href="./study.html">과제/공부</a><a class="tab" href="./calendar.html">캘린더</a><a class="tab" href="./grade.html">성적 역산</a><a class="tab" href="./generator.html">문제 생성</a><a class="tab" href="./auth.html">로그인</a></nav>
 
       <section id="tasksView" class="page-section">
-        <section class="layout">
-          <article class="panel form-panel">
-            <div class="panel-heading">
-              <div>
-                <h2>과목별 공부</h2>
-                <p>과목 탭을 만들고 교안을 올리면 Gemini API로 요점정리를 생성합니다.</p>
-              </div>
-              <button id="addCourse" class="secondary" type="button">과목 추가</button>
-            </div>
-
-            <div id="courseTabs" class="course-tabs"></div>
-
-            <div class="grid two">
-              <label class="field">
-                <span>과목명</span>
-                <input id="courseEditorName" type="text" placeholder="예: 인간과 환경의 이해" />
-              </label>
-              <label class="field">
-                <span>시험일</span>
-                <input id="courseExamDate" type="date" />
-              </label>
-            </div>
-
-            <div class="grid three equal">
-              <label class="field">
-                <span>현재 점수/이해도</span>
-                <input id="courseCurrentScore" type="number" min="0" max="100" value="70" />
-              </label>
-              <label class="field">
-                <span>목표 점수</span>
-                <input id="courseTargetScore" type="number" min="0" max="100" value="90" />
-              </label>
-              <label class="field">
-                <span>주당 확보 시간</span>
-                <input id="courseWeeklyHours" type="number" min="1" max="40" value="6" />
-              </label>
-            </div>
-
-            <div class="grid two">
-              <label class="field">
-                <span>교안 이름</span>
-                <input id="materialTitle" type="text" placeholder="예: 2-1 자기개념" />
-              </label>
-              <div class="field">
-                <span>자동 계획</span>
-                <div id="coursePlanPreview" class="plan-preview">시험일과 목표 점수를 입력하면 홈과 캘린더에 자동 반영됩니다.</div>
-              </div>
-            </div>
-
-            <div class="grid two">
-              <label class="field">
-                <span>교안 파일</span>
-                <input id="courseMaterialFile" type="file" accept=".pdf,.ppt,.pptx" />
-              </label>
-              <div class="field">
-                <span>교안 추가</span>
-                <button id="addMaterial" class="secondary" type="button">선택한 파일 추가</button>
-              </div>
-            </div>
-
-            <div id="materialList" class="material-list empty">이 과목에 등록된 교안이 없습니다.</div>
-
-            <label class="field">
-              <span>요약 요청사항</span>
-              <textarea id="summaryInstruction" rows="3" placeholder="예: 시험에 나올 핵심 개념 위주로 정리"></textarea>
-            </label>
-
-            <div class="button-row">
-              <button id="summarizeMaterial" class="primary inline-primary" type="button">선택 교안 요약</button>
-              <button id="useMaterialForQuestions" class="secondary" type="button">선택 교안으로 문제 생성</button>
-              <button id="deleteMaterial" class="secondary" type="button">선택 교안 삭제</button>
-              <button id="deleteCourse" class="secondary" type="button">과목 삭제</button>
-            </div>
-
-            <p id="summaryStatus" class="status">과목을 선택하고 교안을 업로드하세요.</p>
-          </article>
-
-          <aside class="panel flow-panel timer-panel">
-            <h2>공부 타이머</h2>
-            <div class="timer" id="timerDisplay">00:00:00</div>
-            <div class="button-row">
-              <button id="startTimer" class="secondary" type="button">시작</button>
-              <button id="stopTimer" class="secondary" type="button">정지</button>
-              <button id="resetTimer" class="secondary" type="button">초기화</button>
-            </div>
-            <p id="studyTotal">오늘 누적 공부 시간 0분</p>
+        <section class="study-layout">
+          <aside class="panel course-list-panel">
+            <div class="panel-heading"><div><span class="section-label">내 과목</span><h2>과목 목록</h2></div><button id="addCourse" class="primary small-button" type="button">+ 과목 추가</button></div>
+            <div id="courseTabs" class="course-tabs course-card-list"></div>
           </aside>
-        </section>
 
-        <section class="panel result-panel">
-          <div class="panel-heading">
-            <div>
-              <h2>교안 요점정리</h2>
-              <p id="courseSummaryMeta">요약된 교안이 아직 없습니다.</p>
-            </div>
-          </div>
-          <div id="courseSummary" class="summary-box empty">Gemini 요약 결과가 여기에 표시됩니다.</div>
-        </section>
+          <section class="study-main-stack">
+            <article class="panel course-overview-panel">
+              <div class="panel-heading"><div><span class="section-label">선택 과목</span><h2 id="activeCourseTitle">과목을 선택하세요</h2><p id="activeCourseMeta">과목 정보를 불러오는 중입니다.</p></div><button id="editCourse" class="secondary" type="button">수정하기</button></div>
+              <div class="course-summary-grid"><div><span>시험일</span><strong id="courseSummaryExam">-</strong></div><div><span>현재 점수·이해도</span><strong id="courseSummaryCurrent">-</strong></div><div><span>목표 점수</span><strong id="courseSummaryTarget">-</strong></div><div><span>주당 확보 시간</span><strong id="courseSummaryHours">-</strong></div></div>
+              <div id="coursePlanPreview" class="plan-preview">시험일과 목표 점수를 입력하면 자동 계획이 생성됩니다.</div>
+            </article>
 
-        <section class="panel result-panel">
-          <div class="panel-heading">
-            <div>
-              <h2>과목 오답노트</h2>
-              <p>채점 결과에서 부족한 키워드와 관련 교안 페이지를 모아둡니다.</p>
-            </div>
-          </div>
-          <div id="wrongNoteList" class="wrong-note-list empty">아직 저장된 오답이 없습니다.</div>
+            <article id="courseEditorPanel" class="panel form-panel course-editor-panel" hidden>
+              <div class="panel-heading"><div><span class="section-label">과목 수정</span><h2>기본 정보와 교안 관리</h2></div><button id="cancelCourseEdit" class="secondary" type="button">닫기</button></div>
+              <div class="grid two"><label class="field"><span>과목명</span><input id="courseEditorName" type="text" /></label><label class="field"><span>시험일</span><input id="courseExamDate" type="date" /></label></div>
+              <div class="grid three equal"><label class="field"><span>현재 점수·이해도</span><input id="courseCurrentScore" type="number" min="0" max="100" /></label><label class="field"><span>목표 점수</span><input id="courseTargetScore" type="number" min="0" max="100" /></label><label class="field"><span>주당 확보 시간</span><input id="courseWeeklyHours" type="number" min="1" max="40" /></label></div>
+              <div class="editor-divider"><span>교안</span></div>
+              <div class="grid two"><label class="field"><span>교안 이름</span><input id="materialTitle" type="text" placeholder="예: 2주차 핵심 개념" /></label><label class="field"><span>교안 파일</span><input id="courseMaterialFile" type="file" accept=".pdf,.ppt,.pptx" /></label></div>
+              <button id="addMaterial" class="secondary" type="button">교안 추가</button>
+              <div id="materialList" class="material-list empty">등록된 교안이 없습니다.</div>
+              <label class="field"><span>요약 요청사항</span><textarea id="summaryInstruction" rows="3" placeholder="예: 시험 핵심 개념 중심으로 정리"></textarea></label>
+              <div class="button-row"><button id="summarizeMaterial" class="primary inline-primary" type="button">선택 교안 요약</button><button id="useMaterialForQuestions" class="secondary" type="button">문제 생성에 사용</button><button id="deleteMaterial" class="secondary danger-button" type="button">교안 삭제</button><button id="deleteCourse" class="secondary danger-button" type="button">과목 삭제</button></div>
+              <p id="summaryStatus" class="status">교안을 선택하세요.</p>
+            </article>
+
+            <article class="panel result-panel"><div class="panel-heading"><div><span class="section-label">교안 요약</span><h2>핵심 내용</h2><p id="courseSummaryMeta">요약된 교안이 없습니다.</p></div></div><div id="courseSummary" class="summary-box empty">요약 결과가 여기에 표시됩니다.</div></article>
+            <article class="panel result-panel"><div class="panel-heading"><div><span class="section-label">복습</span><h2>오답 노트</h2></div></div><div id="wrongNoteList" class="wrong-note-list empty">아직 저장된 오답이 없습니다.</div></article>
+          </section>
+
+          <aside class="panel timer-panel sticky-timer"><span class="section-label">공부 타이머</span><h2>집중 시간</h2><div class="timer" id="timerDisplay">00:00:00</div><div class="button-row"><button id="startTimer" class="primary inline-primary" type="button">시작</button><button id="stopTimer" class="secondary" type="button">종료·저장</button><button id="resetTimer" class="secondary" type="button">초기화</button></div><p id="studyTotal">오늘 누적 공부 시간 0분</p></aside>
         </section>
       </section>
-    </main>
 
+      <div id="courseModal" class="modal-backdrop" hidden><form id="courseCreateForm" class="modal-panel wide-modal"><div class="modal-heading"><div><span class="section-label">새 과목</span><h2>과목 추가</h2></div><button id="closeCourseModal" class="icon-button" type="button">×</button></div><div class="grid two"><label class="field"><span>과목명</span><input id="newCourseName" type="text" required /></label><label class="field"><span>시험일</span><input id="newCourseExamDate" type="date" /></label></div><div class="grid three equal"><label class="field"><span>현재 점수·이해도</span><input id="newCourseCurrentScore" type="number" min="0" max="100" value="70" /></label><label class="field"><span>목표 점수</span><input id="newCourseTargetScore" type="number" min="0" max="100" value="90" /></label><label class="field"><span>주당 확보 시간</span><input id="newCourseWeeklyHours" type="number" min="1" max="40" value="6" /></label></div><div class="button-row modal-actions"><button class="secondary" id="cancelCourseModal" type="button">취소</button><button class="primary inline-primary" type="submit">추가하기</button></div></form></div>
+    </main>
     <script src="./app.js"></script>
   </body>
 </html>
