@@ -9,110 +9,43 @@
   </head>
   <body>
     <main class="shell app-shell">
-      <header class="app-header">
-        <div>
-          <p class="eyebrow">grade guardian</p>
-          <h1>학점수호자</h1>
-          <p>과제, 시험, 출석, 성적 흐름과 교안 기반 문제 생성을 한곳에서 관리합니다.</p>
-        </div>
-        <div class="header-score">
-          <span>현재 GPA</span>
-          <strong id="headerGpa">3.48</strong>
-        </div>
-      </header>
+      <header class="app-header"><div><p class="eyebrow">GRADE GUARDIAN</p><h1>학점수호자</h1><p>오늘 필요한 학업 정보만 한눈에 확인하세요.</p></div><div class="header-score"><span>현재 GPA</span><strong id="headerGpa">3.48</strong></div></header>
+      <nav class="tabbar" aria-label="주요 화면"><a class="tab active" href="./index.html">홈</a><a class="tab" href="./study.html">과제/공부</a><a class="tab" href="./calendar.html">캘린더</a><a class="tab" href="./grade.html">성적 역산</a><a class="tab" href="./generator.html">문제 생성</a><a class="tab" href="./auth.html">로그인</a></nav>
 
-      <nav class="tabbar" aria-label="주요 화면">
-        <a class="tab active" href="./index.html">홈</a>
-        <a class="tab " href="./study.html">과제/공부</a>
-        <a class="tab " href="./calendar.html">캘린더/분석</a>
-        <a class="tab " href="./grade.html">성적 역산</a>
-        <a class="tab " href="./generator.html">문제 생성</a>
-        <a class="tab " href="./auth.html">로그인</a>
-      </nav>
+      <section id="dashboardView" class="page-section dashboard-home">
+        <section class="dashboard-welcome">
+          <div><span class="section-label">한눈 요약</span><h2>오늘도 목표 학점에 한 걸음 가까워지고 있어요.</h2><p id="dashboardSummary">학습 데이터를 정리하고 있습니다.</p></div>
+          <a class="primary compact-action" href="./study.html">오늘 공부 시작</a>
+        </section>
 
-      <section id="dashboardView" class="page-section">
-        <section class="dashboard-grid">
-          <article class="panel hero-panel">
-            <div class="panel-heading">
-              <div>
-                <h2>오늘의 자동 학습 계획</h2>
-                <p>과목별 목표 점수와 시험일까지 남은 시간을 기준으로 오늘 할 일을 계산합니다.</p>
-              </div>
-              <span id="gpaBadge" class="badge ok">계획 생성</span>
-            </div>
+        <section class="summary-grid">
+          <article class="summary-card primary-summary"><span>현재 학점</span><strong id="currentGpaText">3.48</strong><small id="gpaHint">목표까지 0.52 남았어요.</small></article>
+          <article class="summary-card"><span>목표 학점</span><strong id="targetGpaText">4.00</strong><small>이번 학기 목표</small></article>
+          <article class="summary-card quota-card"><span>하루 할당량</span><strong id="dailyQuotaValue">0%</strong><div class="meter"><span id="gpaMeter"></span></div><small id="dailyQuotaMeta">오늘 계획을 계산 중이에요.</small></article>
+          <article class="summary-card"><span>남은 과제</span><strong id="upcomingCount">0건</strong><small id="nearestTask">등록된 일정이 없습니다.</small></article>
+          <article class="summary-card"><span>공부 연속 기록</span><strong id="streakValue">14일</strong><small>꾸준함이 성적을 만들어요.</small></article>
+          <article class="summary-card"><span>오늘 총 공부시간</span><strong id="totalStudyTime">0분</strong><small>모든 과목 합계</small></article>
+        </section>
 
-            <div class="gpa-layout">
-              <div class="score-block">
-                <span>현재 GPA</span>
-                <strong id="currentGpaText">3.48</strong>
-              </div>
-              <div class="progress-ring" aria-label="목표 달성률">
-                <strong id="gpaPercent">87%</strong>
-                <span>목표 달성</span>
-              </div>
-              <div class="score-block">
-                <span>목표 GPA</span>
-                <strong id="targetGpaText">4.00</strong>
-              </div>
-            </div>
-            <div class="meter">
-              <span id="gpaMeter"></span>
-            </div>
-            <p id="gpaHint" class="status ok">목표까지 0.52 남았어요.</p>
-            <div class="gpa-input-grid">
-              <label class="field compact">
-                <span>내 현재 GPA 입력</span>
-                <input id="currentGpa" type="number" min="0" max="4.5" step="0.01" value="3.48" />
-              </label>
-              <label class="field compact">
-                <span>목표 GPA 입력</span>
-                <input id="targetGpa" type="number" min="0" max="4.5" step="0.01" value="4.00" />
-              </label>
-            </div>
+        <section class="dashboard-columns">
+          <article class="panel grade-graph-panel">
+            <div class="panel-heading"><div><span class="section-label">성적 그래프</span><h2>목표 학점까지의 흐름</h2><p>과목별 현재 성취도와 목표 점수를 비교합니다.</p></div><span id="gpaBadge" class="badge ok">계획 생성</span></div>
+            <div id="gradeOverviewGraph" class="overview-graph empty">과목을 추가하면 그래프가 표시됩니다.</div>
+            <div class="gpa-input-grid compact-inputs"><label class="field compact"><span>현재 GPA</span><input id="currentGpa" type="number" min="0" max="4.5" step="0.01" value="3.48" /></label><label class="field compact"><span>목표 GPA</span><input id="targetGpa" type="number" min="0" max="4.5" step="0.01" value="4.00" /></label></div>
+            <span id="gpaPercent" class="sr-only">87%</span>
           </article>
 
-          <article class="panel stat-card">
-            <span>다가오는 과제</span>
-            <strong id="upcomingCount">0건</strong>
-            <p id="nearestTask">등록된 일정이 없습니다.</p>
-          </article>
-
-          <article class="panel stat-card">
-            <span>출석률</span>
-            <strong id="attendanceValue">92%</strong>
-            <p>전체 출석률</p>
-          </article>
-
-          <article class="panel stat-card">
-            <span>공부 연속 기록</span>
-            <strong id="streakValue">14일</strong>
-            <p>연속 학습일</p>
+          <article class="panel today-panel">
+            <div class="panel-heading"><div><span class="section-label">오늘 일정</span><h2>오늘 해야 할 일</h2><p id="todayScheduleMeta">오늘 일정을 확인하고 있습니다.</p></div><a class="text-link" href="./calendar.html">전체 보기 →</a></div>
+            <div id="todayScheduleList" class="today-schedule-list empty">오늘 일정이 없습니다.</div>
           </article>
         </section>
 
-        <section class="panel plan-panel">
-          <div class="panel-heading">
-            <div>
-              <h2>자동 조정된 학습 계획</h2>
-              <p id="planSummary">과목 목표와 시험일을 입력하면 계획이 자동으로 잡힙니다.</p>
-            </div>
-            <button class="secondary link-button" type="button" onclick="location.href='./study.html'">과목 설정</button>
-          </div>
-          <div id="autoPlanList" class="auto-plan-list empty">과목별 시험일과 목표 점수를 설정하세요.</div>
-        </section>
-
-        <section class="panel plan-panel">
-          <div class="panel-heading">
-            <div>
-              <h2>과목별 목표 현황</h2>
-              <p>목표와 시험일이 가까운 과목일수록 자동 계획 우선순위가 올라갑니다.</p>
-            </div>
-          </div>
-          <div id="courseGoalList" class="goal-list empty">등록된 과목 목표가 없습니다.</div>
-        </section>
+        <section class="panel plan-panel"><div class="panel-heading"><div><span class="section-label">자동 계획</span><h2>오늘의 과목별 공부 계획</h2><p id="planSummary">과목 목표와 시험일을 입력하면 계획이 자동으로 잡힙니다.</p></div><a class="secondary link-button" href="./study.html">과목 관리</a></div><div id="autoPlanList" class="auto-plan-list empty">과목별 시험일과 목표 점수를 설정하세요.</div></section>
+        <section class="panel plan-panel"><div class="panel-heading"><div><span class="section-label">과목 현황</span><h2>과목별 목표 요약</h2></div></div><div id="courseGoalList" class="goal-list empty">등록된 과목 목표가 없습니다.</div></section>
+        <span id="attendanceValue" class="sr-only">92%</span>
       </section>
     </main>
-
     <script src="./app.js"></script>
   </body>
 </html>
