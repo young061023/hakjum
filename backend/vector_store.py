@@ -2,6 +2,8 @@ import hashlib
 import math
 import os
 import re
+import shutil
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -157,18 +159,44 @@ def get_embedding_function():
     return SentenceTransformerEmbeddingFunction()
 
 
-def get_collection():
+def backup_broken_chroma_dir(reason=""):
+    if not CHROMA_DIR.exists():
+        return None
+
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    backup_dir = CHROMA_DIR.with_name(f"{CHROMA_DIR.name}_broken_{timestamp}")
+    try:
+        shutil.move(str(CHROMA_DIR), str(backup_dir))
+    except Exception as error:
+        raise RuntimeError(f"Chroma DB 초기화 실패: {error}") from error
+    return backup_dir
+
+
+def open_chroma_collection():
     try:
         import chromadb
     except ImportError as error:
         raise RuntimeError("chromadb가 설치되어 있지 않습니다. pip install -r requirements.txt 를 실행하세요.") from error
 
+    CHROMA_DIR.mkdir(parents=True, exist_ok=True)
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
     return client.get_or_create_collection(
         name=COLLECTION_NAME,
         embedding_function=get_embedding_function(),
         metadata={"hnsw:space": "cosine"},
     )
+
+
+def get_collection():
+    try:
+        return open_chroma_collection()
+    except Exception as first_error:
+        backup_dir = backup_broken_chroma_dir(str(first_error))
+        try:
+            return open_chroma_collection()
+        except Exception as second_error:
+            backup_note = f" 백업 위치: {backup_dir}" if backup_dir else ""
+            raise RuntimeError(f"Chroma DB를 다시 열 수 없습니다: {second_error}.{backup_note}") from second_error
 
 
 def supabase_request(path, method="GET", body=None):
