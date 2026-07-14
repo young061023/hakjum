@@ -1,7 +1,155 @@
-<!doctype html><html lang="ko"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>내 계정 - 학점수호자</title><link rel="stylesheet" href="./styles.css"/><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body><main class="shell app-shell">
-<header class="app-header"><div><p class="eyebrow">MY ACCOUNT</p><h1>내 계정</h1><p>프로필과 학습 데이터를 관리하세요.</p></div><div class="header-score"><span>계정 상태</span><strong id="authStateLabel">확인 중</strong></div></header>
-<nav class="tabbar" aria-label="주요 화면"><a class="tab" href="./index.html">홈</a><a class="tab" href="./study.html">과제/공부</a><a class="tab" href="./calendar.html">캘린더</a><a class="tab" href="./grade.html">성적 역산</a><a class="tab" href="./generator.html">문제 생성</a><a class="tab active" href="./auth.html">로그인</a></nav>
-<section class="page-section auth-page"><form id="authForm" class="panel auth-card"><div class="auth-visual"><div class="auth-logo">G</div><span class="section-label">학점수호자</span><h2>내 학습 기록을 안전하게 이어가세요.</h2><p>로그인하면 과목, 일정, 교안 요약과 문제 기록을 계정별로 불러옵니다.</p></div><div class="auth-fields"><h2>로그인</h2><label class="field"><span>이메일</span><input id="authEmail" type="email" autocomplete="email" required/></label><label class="field"><span>비밀번호</span><input id="authPassword" type="password" autocomplete="current-password" required/></label><button id="signInButton" class="primary" type="button">로그인</button><button id="openSignUpModal" class="secondary" type="button">새 계정 만들기</button><p id="authStatus" class="status">연결 상태를 확인하는 중입니다.</p></div></form>
-<section id="accountPanel" class="panel account-panel" hidden><div class="account-cover"></div><div class="account-profile"><label class="profile-photo-editor"><img id="accountAvatar" alt="프로필 사진"/><span>사진 변경</span><input id="profilePhotoInput" type="file" accept="image/*"/></label><div><span class="section-label">로그인한 계정</span><h2 id="accountName">사용자</h2><p id="accountMajor">전공을 입력하세요.</p><small id="accountEmail">-</small></div></div><div class="account-details"><label class="field"><span>이름</span><input id="profileName" type="text" placeholder="이름"/></label><label class="field"><span>전공</span><input id="profileMajor" type="text" placeholder="예: 컴퓨터공학과"/></label><button id="saveProfile" class="primary inline-primary" type="button">프로필 저장</button></div><button id="signOutButton" class="secondary account-signout" type="button">로그아웃</button></section>
-<details class="settings connection-settings"><summary>연결 설정</summary><label class="field"><span>Supabase URL</span><input id="supabaseUrl" type="url"/></label><label class="field"><span>Supabase anon key</span><input id="supabaseAnonKey" type="password"/></label><button id="saveSettings" class="secondary" type="button">설정 저장</button></details></section>
-<div id="signUpModal" class="modal-backdrop" hidden><section class="modal-panel"><div class="modal-heading"><h2>회원가입</h2><button id="closeSignUpModal" class="icon-button" type="button">×</button></div><label class="field"><span>이메일</span><input id="signUpEmail" type="email"/></label><label class="field"><span>비밀번호</span><input id="signUpPassword" type="password"/></label><label class="field"><span>비밀번호 확인</span><input id="signUpPasswordConfirm" type="password"/></label><div class="button-row modal-actions"><button id="cancelSignUpModal" class="secondary" type="button">취소</button><button id="signUpButton" class="primary inline-primary" type="button">회원가입</button></div></section></div></main><script src="./app.js"></script></body></html>
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>내 계정 - 학점수호자</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,500,0,0" />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+  <body>
+    <main class="shell app-shell">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">MY ACCOUNT</p>
+          <h1>내 계정</h1>
+          <p>프로필과 학습 데이터를 관리하세요.</p>
+        </div>
+        <label class="header-search"><span aria-hidden="true">⌕</span><input type="search" placeholder="무엇을 도와드릴까요?" aria-label="검색" /><kbd>⌘K</kbd></label>
+        <a class="header-coach" href="./study.html"><span aria-hidden="true">✦</span> AI 학점 코치</a>
+        <a class="header-notification" href="./calendar.html" aria-label="일정 알림"><span aria-hidden="true">♧</span><i></i></a>
+        <div class="header-score">
+          <span>계정 상태</span><strong id="authStateLabel">확인 중</strong>
+        </div>
+      </header>
+      <nav class="tabbar" aria-label="주요 화면">
+        <a class="tab" href="./index.html">홈</a
+        ><a class="tab" href="./study.html">과제/공부</a
+        ><a class="tab" href="./calendar.html">캘린더</a
+        ><a class="tab" href="./grade.html">성적 역산</a
+        ><a class="tab" href="./generator.html">문제 생성</a
+        ><a class="tab active" href="./auth.html">로그인</a>
+      </nav>
+      <section class="page-section auth-page">
+        <form id="authForm" class="panel auth-card">
+          <div class="auth-visual">
+            <div class="auth-logo">G</div>
+            <span class="section-label">학점수호자</span>
+            <h2>내 학습 기록을 안전하게 이어가세요.</h2>
+            <p>
+              로그인하면 과목, 일정, 교안 요약과 문제 기록을 계정별로
+              불러옵니다.
+            </p>
+          </div>
+          <div class="auth-fields">
+            <h2>로그인</h2>
+            <label class="field"
+              ><span>이메일</span
+              ><input
+                id="authEmail"
+                type="email"
+                autocomplete="email"
+                required /></label
+            ><label class="field"
+              ><span>비밀번호</span
+              ><input
+                id="authPassword"
+                type="password"
+                autocomplete="current-password"
+                required /></label
+            ><button id="signInButton" class="primary" type="button">
+              로그인</button
+            ><button id="openSignUpModal" class="secondary" type="button">
+              새 계정 만들기
+            </button>
+            <p id="authStatus" class="status">연결 상태를 확인하는 중입니다.</p>
+          </div>
+        </form>
+        <section id="accountPanel" class="panel account-panel" hidden>
+          <div class="account-cover"></div>
+          <div class="account-profile">
+            <label class="profile-photo-editor"
+              ><img id="accountAvatar" alt="프로필 사진" /><span>사진 변경</span
+              ><input id="profilePhotoInput" type="file" accept="image/*"
+            /></label>
+            <div>
+              <span class="section-label">로그인한 계정</span>
+              <h2 id="accountName">사용자</h2>
+              <p id="accountMajor">전공을 입력하세요.</p>
+              <small id="accountEmail">-</small>
+            </div>
+          </div>
+          <div class="account-details">
+            <label class="field"
+              ><span>이름</span
+              ><input id="profileName" type="text" placeholder="이름" /></label
+            ><label class="field"
+              ><span>전공</span
+              ><input
+                id="profileMajor"
+                type="text"
+                placeholder="예: 컴퓨터공학과" /></label
+            ><button
+              id="saveProfile"
+              class="primary inline-primary"
+              type="button"
+            >
+              프로필 저장
+            </button>
+          </div>
+          <button
+            id="signOutButton"
+            class="secondary account-signout"
+            type="button"
+          >
+            로그아웃
+          </button>
+        </section>
+        <details class="settings connection-settings">
+          <summary>연결 설정</summary>
+          <label class="field"
+            ><span>Supabase URL</span
+            ><input id="supabaseUrl" type="url" /></label
+          ><label class="field"
+            ><span>Supabase anon key</span
+            ><input id="supabaseAnonKey" type="password" /></label
+          ><button id="saveSettings" class="secondary" type="button">
+            설정 저장
+          </button>
+        </details>
+      </section>
+      <div id="signUpModal" class="modal-backdrop" hidden>
+        <section class="modal-panel">
+          <div class="modal-heading">
+            <h2>회원가입</h2>
+            <button id="closeSignUpModal" class="icon-button" type="button">
+              ×
+            </button>
+          </div>
+          <label class="field"
+            ><span>이메일</span><input id="signUpEmail" type="email" /></label
+          ><label class="field"
+            ><span>비밀번호</span
+            ><input id="signUpPassword" type="password" /></label
+          ><label class="field"
+            ><span>비밀번호 확인</span
+            ><input id="signUpPasswordConfirm" type="password"
+          /></label>
+          <div class="button-row modal-actions">
+            <button id="cancelSignUpModal" class="secondary" type="button">
+              취소</button
+            ><button
+              id="signUpButton"
+              class="primary inline-primary"
+              type="button"
+            >
+              회원가입
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
