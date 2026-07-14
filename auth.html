@@ -60,13 +60,32 @@
             >
               로그인
             </button>
-            <button id="signUpButton" class="secondary" type="button">
+            <button id="openSignUpModal" class="secondary" type="button">
               가입
             </button>
             <button id="signOutButton" class="secondary" type="button">
               로그아웃
             </button>
           </div>
+
+          <p id="authStatus" class="status">
+            Supabase 연결 상태를 확인하는 중입니다.
+          </p>
+
+          <details class="settings">
+            <summary>Supabase 연결 설정</summary>
+            <label class="field">
+              <span>Supabase URL</span>
+              <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co" />
+            </label>
+            <label class="field">
+              <span>Supabase anon key</span>
+              <input id="supabaseAnonKey" type="password" placeholder="eyJ..." />
+            </label>
+            <button id="saveSettings" class="secondary" type="button">
+              설정 저장
+            </button>
+          </details>
         </form>
 
         <aside class="panel flow-panel">
@@ -88,6 +107,39 @@
           </ol>
         </aside>
       </section>
+
+      <div id="signUpModal" class="modal-backdrop" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="signUpTitle">
+          <div class="modal-heading">
+            <h2 id="signUpTitle">회원가입</h2>
+            <button id="closeSignUpModal" class="icon-button" type="button" aria-label="닫기">×</button>
+          </div>
+
+          <label class="field">
+            <span>이메일</span>
+            <input id="signUpEmail" type="email" autocomplete="email" />
+          </label>
+
+          <label class="field">
+            <span>비밀번호</span>
+            <input id="signUpPassword" type="password" autocomplete="new-password" />
+          </label>
+
+          <label class="field">
+            <span>비밀번호 확인</span>
+            <input id="signUpPasswordConfirm" type="password" autocomplete="new-password" />
+          </label>
+
+          <div class="button-row">
+            <button id="signUpButton" class="primary inline-primary" type="button">
+              회원가입
+            </button>
+            <button id="cancelSignUpModal" class="secondary" type="button">
+              취소
+            </button>
+          </div>
+        </section>
+      </div>
     </main>
 
     <script src="./app.js"></script>
